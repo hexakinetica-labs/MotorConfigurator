@@ -1,13 +1,14 @@
 # Hexakinetica Motor Configurator 🤖
 
-![License](https://img.shields.io/badge/license-AGPLv3-blue.svg)
-![Standard](https://img.shields.io/badge/C%2B%2B-17-blue.svg)
+![Standard](https://img.shields.io/badge/C%2B%2B-20-blue.svg)
 ![Platform](https://img.shields.io/badge/platform-Linux-lightgrey.svg)
 ![Status](https://img.shields.io/badge/status-Active-green.svg)
+![License](https://img.shields.io/badge/license-AGPLv3-blue.svg)
+
 
 **Hexakinetica Motor Configurator** is a high-performance C++ application designed for configuring, testing, and controlling industrial robot motors. This software is an integral part of the **Hexakinetica** project and is specifically used for configuring the motors of the **HexaArm Medium**, **HexaArm Medium Pro**, and **HexaArm Mini pro** industrial robot series.
 
-[HexaLabs MotorConfigurator](MotorConfigurator.jpg)
+![HexaLabs MotorConfigurator: ](MotorConfigurator.jpg)
 > 🎥 **Watch on YouTube**: [Demo Video](https://www.youtube.com/watch?v=gU8G4GgxzSM)
 
 
