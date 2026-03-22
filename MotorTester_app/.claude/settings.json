@@ -1,7 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(find /home/rdt/Desktop/Ethercat/MotorTester_v1/MotorTester_app -type f \\\\\\(-name *example* -o -name *sample* -o -name *test* \\\\\\) -name *.cpp -o -name *.h)"
-    ]
-  }
-}
