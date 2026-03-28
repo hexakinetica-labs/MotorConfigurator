@@ -9,6 +9,8 @@
 #include <QPainter>
 #include <QPainterPath>
 #include <QDateTime>
+#include <QPolygonF>
+#include <functional>
 
 namespace RDT {
 
@@ -29,6 +31,7 @@ public:
 
     void addChannel(const QString& name, const QColor& color);
     void addData(const QString& name, double x, double y);
+    void addDataBatch(const QString& name, const QVector<QPointF>& points);
     void setChannelVisibility(const QString& name, bool visible);
     
     void setYRange(double min, double max);
@@ -40,11 +43,20 @@ protected:
     void paintEvent(QPaintEvent* event) override;
 
 private:
+    void appendPointToChannel(ScopeChannel& channel, double x, double y);
+    void scheduleRepaint();
+    void appendDecimatedPolyline(const ScopeChannel& channel,
+                                 double min_x,
+                                 const std::function<double(double)>& map_x,
+                                 const std::function<double(double)>& map_y,
+                                 double viewport_width,
+                                 QPolygonF& out_polyline) const;
+
     QMap<QString, ScopeChannel> channels_;
     bool repaint_scheduled_ = false;
     bool deferred_repaint_pending_ = false;
     qint64 last_repaint_ms_ = 0;
-    int repaint_interval_ms_ = 33; // ~30 FPS
+    int repaint_interval_ms_ = 16; // ~60 FPS
     qint64 last_autorange_update_ms_ = 0;
     int autorange_update_interval_ms_ = 120;
     

@@ -3,10 +3,10 @@
 #include <QPointer>
 #include <QWidget>
 #include <QVariantMap>
-#include <thread>
 #include <atomic>
-#include <queue>
+#include <deque>
 #include <mutex>
+#include <cstdint>
 
 class QTabWidget;
 class QLabel;
@@ -52,15 +52,19 @@ private slots:
     void onParametersRead(int axis_id, const QVariantList& params);
     void onSineToggled(bool enabled);
     void fillTrajectoryQueue();
+    void onMotionQueueStatsUpdated(int axis_id, const QVariantMap& stats);
 
 private:
     void setupUi();
     void setupControlTab();
     void setupConfigTab();
     void scheduleWatchAxis(bool enabled);
-    void trajectoryLoop();
+    void ensureMotionQueueConfigured();
+    void flushTrajectoryBatchToRuntime();
     void setParameterReadInProgress(bool in_progress);
     void stopSineModeForDisable();
+    void clearMotionBuffersForServiceCommand(bool reset_ui_to_zero);
+    void resetUiAfterSetZero();
 
     friend class mks::SequencerWidget;
 
@@ -105,8 +109,18 @@ private:
     QSlider* sld_scope_time_{nullptr};
     QLabel* lbl_scope_time_{nullptr};
     QCheckBox* chk_auto_scale_{nullptr};
+    QLabel* lbl_motion_queue_stats_{nullptr};
+    QLabel* lbl_cmd_tx_rate_{nullptr};
+    QLabel* lbl_telemetry_rate_{nullptr};
+    QLabel* lbl_position_rx_rate_{nullptr};
+    QLabel* lbl_speed_rx_rate_{nullptr};
+    QLabel* lbl_status_rx_rate_{nullptr};
+    QLabel* lbl_protection_rx_rate_{nullptr};
 
     qint64 telemetry_t0_ms_{0};
+    std::uint64_t telemetry_t0_ns_{0U};
+    double scope_target_time_cursor_sec_{0.0};
+    bool scope_target_time_cursor_initialized_{false};
 
     
     // Config tab
@@ -126,15 +140,19 @@ private:
     QDoubleSpinBox* spin_sine_amp_{nullptr};
     QDoubleSpinBox* spin_sine_freq_{nullptr};
     
-    std::thread trajectory_thread_;
-    std::atomic<bool> trajectory_thread_active_{false};
-    
-    std::queue<double> trajectory_queue_;
+    std::atomic<std::size_t> driver_queue_size_{0};
+    std::uint64_t last_driver_underruns_{0U};
+    std::uint64_t last_driver_short_starts_{0U};
+    bool motion_queue_configured_{false};
+    bool motion_queue_prefilled_{false};
+
+    std::deque<double> trajectory_queue_;
+    std::size_t streamed_trajectory_points_{0U};
     std::mutex trajectory_mutex_;
     QTimer* queue_fill_timer_{nullptr};
     
-    std::atomic<int> current_speed_{400};
-    std::atomic<int> current_accel_{50};
+    std::atomic<int> current_speed_{1800};
+    std::atomic<int> current_accel_{100};
     
     std::atomic<double> desired_target_deg_{0.0};
     std::atomic<double> commanded_target_deg_{0.0};

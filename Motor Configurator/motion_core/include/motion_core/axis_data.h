@@ -11,6 +11,7 @@ struct AxisTelemetry {
     AxisState state{AxisState::Unknown};
     AxisMode mode{AxisMode::ProfilePosition};
     double actual_position_deg{0.0};
+    std::int64_t raw_axis_position{0};
     double target_position_deg{0.0};
     double actual_velocity_deg_per_sec{0.0};
     double actual_torque_percent{0.0};
@@ -44,6 +45,9 @@ struct QueuedSetpoint {
     double profile_accel_percent{0.0};
     bool has_target_velocity{false};
     double target_velocity_deg_per_sec{0.0};
+    // Producer-side sample period for this setpoint (seconds).
+    // Used by buffered streaming drivers to keep a time-based horizon.
+    double sample_period_sec{0.004};
 };
 
 struct MotionQueueStats {
@@ -51,6 +55,8 @@ struct MotionQueueStats {
     std::size_t capacity{0U};
     std::uint64_t pushed{0U};
     std::uint64_t dropped{0U};
+    std::uint64_t underruns{0U};
+    std::uint64_t short_starts{0U};
 };
 
 } // namespace motion_core

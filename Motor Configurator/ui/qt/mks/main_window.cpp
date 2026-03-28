@@ -2,7 +2,7 @@
 
 #include "mks/axis_manager.h"
 #include "mks/axis_workspace.h"
-#include "mks/internal/port/gs_usb_can_port.h"
+#include "mks_can/internal/port/gs_usb_can_port.h"
 
 #include <QDateTime>
 #include <QComboBox>
@@ -31,6 +31,9 @@
 
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     setupUi();
+    if (scan_max_id_spin_) {
+        scan_max_id_spin_->setValue(10);
+    }
 
     manager_thread_ = new QThread(this);
     manager_ = new mks::AxisManager();
@@ -209,7 +212,7 @@ void MainWindow::setupUi() {
     baud_combo_->setCurrentText("500000");
     scan_max_id_spin_ = new QSpinBox(mks_tab);
     scan_max_id_spin_->setRange(1, 2047);
-    scan_max_id_spin_->setValue(64);
+    scan_max_id_spin_->setValue(10);
     
     mks_form->addRow("Interface:", device_combo_);
     mks_form->addRow("Baudrate:", baud_combo_);

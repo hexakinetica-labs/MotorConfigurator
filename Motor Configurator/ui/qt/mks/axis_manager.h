@@ -42,6 +42,10 @@ public slots:
     void clearErrors(int axis_id);
     void moveAbsoluteAxis(int axis_id, int speed, int accel, double axis_deg);
     void moveRelativeAxis(int axis_id, int speed, int accel, double delta_deg);
+    void configureMotionQueue(int axis_id, int capacity, bool drop_oldest);
+    void enqueueMotionBatch(int axis_id, const QVariantList& points);
+    void clearMotionQueue(int axis_id);
+    void requestMotionQueueStats(int axis_id);
     void setAxisMode(int axis_id, int mode_code);
     void setZeroPosition(int axis_id);
     void goHome(int axis_id);
@@ -66,6 +70,7 @@ signals:
     void scanFinished(const QString& transport_tag, const QVariantList& axis_ids);
     void telemetryUpdated(int axis_id, const QVariantMap& telemetry);
     void busStatisticsUpdated(const QVariantMap& bus_stats);
+    void motionQueueStatsUpdated(int axis_id, const QVariantMap& stats);
     void parameterListReady(int axis_id, const QVariantList& params);
     void parametersRead(int axis_id, const QVariantList& params);
     void axisConfigPreviewReady(int axis_id, const QVariantList& patch_entries);
@@ -115,6 +120,7 @@ private:
     QSet<int> parameter_reads_in_progress_;
     QSet<int> parameter_writes_in_progress_;
     int rr_index_{0};
+    int ui_priority_axis_id_{-1};
 };
 
 } // namespace mks

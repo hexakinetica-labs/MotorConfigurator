@@ -2,6 +2,7 @@
 #include <QDateTime>
 #include <algorithm>
 #include <cmath>
+#include <limits>
 
 namespace RDT {
 
@@ -11,46 +12,30 @@ ScopeWidget::ScopeWidget(QWidget* parent) : QWidget(parent) {
 
 ScopeWidget::~ScopeWidget() {}
 
-void ScopeWidget::addChannel(const QString& name, const QColor& color) {
-    if (!channels_.contains(name)) {
-        ScopeChannel ch;
-        ch.name = name;
-        ch.color = color;
-        ch.visible = true;
-        channels_.insert(name, ch);
+void ScopeWidget::appendPointToChannel(ScopeChannel& ch, const double x, const double y) {
+    if (ch.data.capacity() < MAX_POINTS) {
+        ch.data.reserve(MAX_POINTS);
     }
+
+    if (ch.data.size() < MAX_POINTS) {
+        ch.data.append(QPointF(x, y));
+        ch.size = ch.data.size();
+        ch.head = 0;
+        return;
+    }
+
+    // Ring-buffer overwrite without shifting memory.
+    ch.data[ch.head] = QPointF(x, y);
+    ch.head = (ch.head + 1) % MAX_POINTS;
+    ch.size = MAX_POINTS;
 }
 
-void ScopeWidget::addData(const QString& name, double x, double y) {
-    if (channels_.contains(name)) {
-        auto& ch = channels_[name];
-        if (ch.data.capacity() < MAX_POINTS) {
-            ch.data.reserve(MAX_POINTS);
-        }
-
-        if (ch.data.size() < MAX_POINTS) {
-            ch.data.append(QPointF(x, y));
-            ch.size = ch.data.size();
-            ch.head = 0;
-        } else {
-            // Ring-buffer overwrite without shifting memory.
-            const int write_index = (ch.head + ch.size) % MAX_POINTS;
-            if (ch.size < MAX_POINTS) {
-                ch.data[write_index] = QPointF(x, y);
-                ++ch.size;
-            } else {
-                ch.data[ch.head] = QPointF(x, y);
-                ch.head = (ch.head + 1) % MAX_POINTS;
-                ch.size = MAX_POINTS;
-            }
-        }
-    }
-
-    // Coalesce multiple addData calls and cap repaint rate.
+void ScopeWidget::scheduleRepaint() {
     if (!isVisible()) {
         return;
     }
 
+    // Coalesce multiple data appends and cap repaint rate.
     const qint64 now_ms = QDateTime::currentMSecsSinceEpoch();
     const qint64 next_allowed_in_ms = repaint_interval_ms_ - (now_ms - last_repaint_ms_);
     if (next_allowed_in_ms > 0) {
@@ -58,7 +43,9 @@ void ScopeWidget::addData(const QString& name, double x, double y) {
             deferred_repaint_pending_ = true;
             QTimer::singleShot(static_cast<int>(next_allowed_in_ms), this, [this]() {
                 deferred_repaint_pending_ = false;
-                if (!isVisible()) return;
+                if (!isVisible()) {
+                    return;
+                }
                 last_repaint_ms_ = QDateTime::currentMSecsSinceEpoch();
                 update();
             });
@@ -74,6 +61,42 @@ void ScopeWidget::addData(const QString& name, double x, double y) {
             update();
         });
     }
+}
+
+void ScopeWidget::addChannel(const QString& name, const QColor& color) {
+    if (!channels_.contains(name)) {
+        ScopeChannel ch;
+        ch.name = name;
+        ch.color = color;
+        ch.visible = true;
+        channels_.insert(name, ch);
+    }
+}
+
+void ScopeWidget::addData(const QString& name, double x, double y) {
+    auto it = channels_.find(name);
+    if (it == channels_.end()) {
+        return;
+    }
+    appendPointToChannel(it.value(), x, y);
+    scheduleRepaint();
+}
+
+void ScopeWidget::addDataBatch(const QString& name, const QVector<QPointF>& points) {
+    if (points.isEmpty()) {
+        return;
+    }
+
+    auto it = channels_.find(name);
+    if (it == channels_.end()) {
+        return;
+    }
+
+    auto& ch = it.value();
+    for (const auto& point : points) {
+        appendPointToChannel(ch, point.x(), point.y());
+    }
+    scheduleRepaint();
 }
 
 void ScopeWidget::setChannelVisibility(const QString& name, bool visible) {
@@ -109,6 +132,100 @@ void ScopeWidget::clear() {
         ch.size = 0;
     }
     update();
+}
+
+void ScopeWidget::appendDecimatedPolyline(const ScopeChannel& ch,
+                                          const double min_x,
+                                          const std::function<double(double)>& map_x,
+                                          const std::function<double(double)>& map_y,
+                                          const double viewport_width,
+                                          QPolygonF& out_polyline) const {
+    if (ch.size <= 0 || ch.data.isEmpty()) {
+        return;
+    }
+
+    struct BucketState {
+        bool has_points{false};
+        QPointF first_point{};
+        QPointF last_point{};
+        QPointF min_point{};
+        QPointF max_point{};
+        std::int64_t min_seq{0};
+        std::int64_t max_seq{0};
+        std::int64_t current_seq{0};
+    };
+
+    const auto append_if_new = [&out_polyline](const QPointF& p) {
+        if (out_polyline.isEmpty() || out_polyline.back() != p) {
+            out_polyline.append(p);
+        }
+    };
+
+    const auto flush_bucket = [&](BucketState& bucket) {
+        if (!bucket.has_points) {
+            return;
+        }
+        append_if_new(QPointF(map_x(bucket.first_point.x()), map_y(bucket.first_point.y())));
+
+        const bool has_range = std::abs(bucket.max_point.y() - bucket.min_point.y()) > 1e-12;
+        if (has_range) {
+            if (bucket.min_seq <= bucket.max_seq) {
+                append_if_new(QPointF(map_x(bucket.min_point.x()), map_y(bucket.min_point.y())));
+                append_if_new(QPointF(map_x(bucket.max_point.x()), map_y(bucket.max_point.y())));
+            } else {
+                append_if_new(QPointF(map_x(bucket.max_point.x()), map_y(bucket.max_point.y())));
+                append_if_new(QPointF(map_x(bucket.min_point.x()), map_y(bucket.min_point.y())));
+            }
+        }
+
+        append_if_new(QPointF(map_x(bucket.last_point.x()), map_y(bucket.last_point.y())));
+        bucket = BucketState{};
+    };
+
+    const int bucket_count = std::max(1, static_cast<int>(std::ceil(viewport_width)));
+    int current_bucket = std::numeric_limits<int>::min();
+    BucketState bucket_state{};
+
+    for (int i = 0; i < ch.size; ++i) {
+        const int idx = (ch.head + i) % ch.data.size();
+        const auto& p = ch.data[idx];
+        if (p.x() < min_x) {
+            continue;
+        }
+
+        int bucket_index = static_cast<int>(map_x(p.x()));
+        bucket_index = std::clamp(bucket_index, 0, bucket_count - 1);
+
+        if (bucket_index != current_bucket) {
+            flush_bucket(bucket_state);
+            current_bucket = bucket_index;
+        }
+
+        if (!bucket_state.has_points) {
+            bucket_state.has_points = true;
+            bucket_state.first_point = p;
+            bucket_state.last_point = p;
+            bucket_state.min_point = p;
+            bucket_state.max_point = p;
+            bucket_state.min_seq = 0;
+            bucket_state.max_seq = 0;
+            bucket_state.current_seq = 1;
+            continue;
+        }
+
+        bucket_state.last_point = p;
+        if (p.y() < bucket_state.min_point.y()) {
+            bucket_state.min_point = p;
+            bucket_state.min_seq = bucket_state.current_seq;
+        }
+        if (p.y() > bucket_state.max_point.y()) {
+            bucket_state.max_point = p;
+            bucket_state.max_seq = bucket_state.current_seq;
+        }
+        ++bucket_state.current_seq;
+    }
+
+    flush_bucket(bucket_state);
 }
 
 void ScopeWidget::paintEvent(QPaintEvent* /*event*/) {
@@ -200,23 +317,14 @@ void ScopeWidget::paintEvent(QPaintEvent* /*event*/) {
         return h - (y - y_min_) / (y_max_ - y_min_) * h;
     };
     
-    // Draw Channels (polyline is lighter than QPainterPath for dense updates)
+    // Draw channels with viewport decimation: keep extrema in each pixel bucket.
     for (auto it = channels_.begin(); it != channels_.end(); ++it) {
         const auto& ch = it.value();
         if (!ch.visible || ch.size == 0 || ch.data.empty()) continue;
 
         QPolygonF poly;
-        poly.reserve(ch.size);
-
-        for (int i = 0; i < ch.size; ++i) {
-            const int idx = (ch.head + i) % ch.data.size();
-            const auto& p = ch.data[idx];
-            if (p.x() < min_x) continue;
-
-            double px = mapX(p.x());
-            double py = mapY(p.y());
-            poly.append(QPointF(px, py));
-        }
+        poly.reserve(std::max(32, static_cast<int>(w * 3.0)));
+        appendDecimatedPolyline(ch, min_x, mapX, mapY, w, poly);
 
         if (poly.size() < 2) continue;
 

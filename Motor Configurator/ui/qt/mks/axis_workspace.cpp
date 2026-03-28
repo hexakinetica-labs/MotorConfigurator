@@ -18,7 +18,6 @@
 #include <QMetaType>
 #include <QPushButton>
 #include <QStringList>
-#include <QThread>
 #include <QSpinBox>
 #include <QStyledItemDelegate>
 #include <QTabWidget>
@@ -37,8 +36,10 @@
 #include <QHash>
 #include <QRadioButton>
 #include <QAbstractSpinBox>
+#include <algorithm>
 #include <cmath>
-#include "mks/dictionary/mks_dictionary.h"
+#include <iterator>
+#include "mks_can/dictionary/mks_dictionary.h"
 #include "mks/sequencer_widget.h"
 
 namespace {
@@ -49,7 +50,14 @@ constexpr int kUnitColumn = 2;
 constexpr int kReadOnlyColumn = 3;
 constexpr int kCurrentValueColumn = 4;
 constexpr int kNewValueColumn = 5;
-
+constexpr int kDefaultMksSpeedRpm = 1800;
+constexpr int kDefaultMksAccelPercent = 100;
+constexpr int kUiTrajectoryLoopPeriodUs = 5'000; // fixed 200 Hz local UI trajectory loop
+constexpr std::size_t kUiTrajectorySourceBufferSize = static_cast<std::size_t>(1'000'000 / kUiTrajectoryLoopPeriodUs);
+constexpr int kMotionQueueCapacity = 512;
+constexpr std::size_t kMotionQueuePrefillSamples = 96U;
+constexpr std::size_t kMotionQueueLowWatermarkSamples = 48U;
+constexpr std::size_t kMotionQueueTopUpBatchSamples = 32U;
 class NewValueColumnDelegate final : public QStyledItemDelegate {
 public:
     explicit NewValueColumnDelegate(QObject* parent = nullptr)
@@ -169,8 +177,9 @@ QString protocolDetailsForParameter(const int domain, const int value) {
                 "<b>Values:</b> 0=Disable, 1=Enable.");
         case MksParameter::CanBitrateIndex:
             return QStringLiteral(
-                "<b>Command:</b> 0x8A SetCanBitrate (read-only here)<br>"
-                "<b>Values:</b> 0=125k, 1=250k, 2=500k, 3=1M.");
+                "<b>Command:</b> 0x8A SetCanBitrate<br>"
+                "<b>Values:</b> 0=125k, 1=250k, 2=500k, 3=1M.<br>"
+                "<b>Operational note:</b> bitrate changes are persisted in drive and require manual CAN reconnect at the new bitrate.");
         case MksParameter::CanId:
             return QStringLiteral(
                 "<b>Command:</b> 0x8B SetCanId<br>"
@@ -383,21 +392,26 @@ AxisWorkspace::AxisWorkspace(int axis_id, mks::AxisManager* manager, QWidget* pa
             this, SLOT(onParametersRead(int,QVariantList)));
     connect(manager_, SIGNAL(axisConfigPreviewReady(int,QVariantList)),
             this, SLOT(onAxisConfigPreviewReady(int,QVariantList)));
+    connect(manager_, SIGNAL(motionQueueStatsUpdated(int,QVariantMap)),
+            this, SLOT(onMotionQueueStatsUpdated(int,QVariantMap)));
 
     queue_fill_timer_ = new QTimer(this);
-    connect(queue_fill_timer_, &QTimer::timeout, this, &AxisWorkspace::fillTrajectoryQueue);
-    queue_fill_timer_->start(100); // Check every 100ms
-
-    trajectory_thread_active_ = true;
-    trajectory_thread_ = std::thread(&AxisWorkspace::trajectoryLoop, this);
+    connect(queue_fill_timer_, &QTimer::timeout, this, [this]() {
+        fillTrajectoryQueue();
+        flushTrajectoryBatchToRuntime();
+        if (manager_) {
+            QMetaObject::invokeMethod(manager_.data(), "requestMotionQueueStats", Qt::QueuedConnection,
+                                      Q_ARG(int, axis_id_));
+        }
+    });
+    queue_fill_timer_->start(100); // periodic top-up and queue stats refresh
 
     scheduleWatchAxis(true);
 }
 
 AxisWorkspace::~AxisWorkspace() {
-    trajectory_thread_active_ = false;
-    if (trajectory_thread_.joinable()) {
-        trajectory_thread_.join();
+    if (queue_fill_timer_) {
+        queue_fill_timer_->stop();
     }
     scheduleWatchAxis(false);
 }
@@ -418,6 +432,120 @@ void AxisWorkspace::scheduleWatchAxis(const bool enabled) {
     if (!ok) {
         qWarning("AxisWorkspace: failed to schedule watchAxis(%d, %d)", axis_id_, enabled ? 1 : 0);
     }
+}
+
+void AxisWorkspace::ensureMotionQueueConfigured() {
+    if (!manager_ || motion_queue_configured_) {
+        return;
+    }
+    QMetaObject::invokeMethod(manager_.data(), "configureMotionQueue", Qt::QueuedConnection,
+                              Q_ARG(int, axis_id_),
+                              Q_ARG(int, kMotionQueueCapacity),
+                              Q_ARG(bool, false));
+    motion_queue_configured_ = true;
+}
+
+void AxisWorkspace::flushTrajectoryBatchToRuntime() {
+    if (!manager_ || !sine_enabled_.load(std::memory_order_acquire)) {
+        return;
+    }
+
+    ensureMotionQueueConfigured();
+
+    const std::size_t runtime_queue_size = driver_queue_size_.load(std::memory_order_acquire);
+    const bool is_prefill_phase = !motion_queue_prefilled_;
+    if (!is_prefill_phase && runtime_queue_size >= kMotionQueueLowWatermarkSamples) {
+        return;
+    }
+
+    const std::size_t points_to_take = is_prefill_phase ? kMotionQueuePrefillSamples : kMotionQueueTopUpBatchSamples;
+    std::vector<double> batch_points;
+    batch_points.reserve(points_to_take);
+
+    {
+        std::lock_guard<std::mutex> lock(trajectory_mutex_);
+        const std::size_t available = std::min(points_to_take, trajectory_queue_.size());
+        for (std::size_t i = 0; i < available; ++i) {
+            batch_points.push_back(trajectory_queue_.front());
+            trajectory_queue_.pop_front();
+        }
+    }
+
+    if (batch_points.empty()) {
+        return;
+    }
+
+    QVariantList batch;
+    batch.reserve(static_cast<int>(batch_points.size()));
+    for (const double point : batch_points) {
+        QVariantMap map;
+        map["target_position_deg"] = point;
+        map["has_profile_speed_rpm"] = true;
+        map["profile_speed_rpm"] = current_speed_.load(std::memory_order_relaxed);
+        map["has_profile_accel_percent"] = true;
+        map["profile_accel_percent"] = current_accel_.load(std::memory_order_relaxed);
+        map["sample_period_sec"] = static_cast<double>(kUiTrajectoryLoopPeriodUs) / 1'000'000.0;
+        batch.push_back(map);
+    }
+
+    auto* manager = manager_.data();
+    QMetaObject::invokeMethod(manager, [manager, axis_id = axis_id_, batch]() {
+        if (!manager) {
+            return;
+        }
+        manager->enqueueMotionBatch(axis_id, batch);
+    }, Qt::QueuedConnection);
+
+    streamed_trajectory_points_ += batch_points.size();
+    const double last_target = batch_points.back();
+    desired_target_deg_.store(last_target, std::memory_order_relaxed);
+    commanded_target_deg_.store(last_target, std::memory_order_relaxed);
+
+    // Keep desired trajectory visible in sine streaming mode from queued target samples,
+    // independent from sparse/stale telemetry target field updates.
+    if (scope_ && cmb_scope_signal_ && cmb_scope_signal_->currentText().startsWith("Position")) {
+        const qint64 now_ms = QDateTime::currentMSecsSinceEpoch();
+        if (telemetry_t0_ms_ == 0) {
+            telemetry_t0_ms_ = now_ms;
+        }
+        const double now_t_sec = static_cast<double>(now_ms - telemetry_t0_ms_) / 1000.0;
+        constexpr double kMaxScopeTargetCursorDriftSec = 0.5;
+        const double sample_period_sec = static_cast<double>(kUiTrajectoryLoopPeriodUs) / 1'000'000.0;
+
+        if (!scope_target_time_cursor_initialized_) {
+            scope_target_time_cursor_sec_ = now_t_sec;
+            scope_target_time_cursor_initialized_ = true;
+        }
+        if (std::abs(scope_target_time_cursor_sec_ - now_t_sec) > kMaxScopeTargetCursorDriftSec) {
+            scope_target_time_cursor_sec_ = now_t_sec;
+        }
+
+        double target_sample_t_sec = scope_target_time_cursor_sec_;
+        if (chk_plot_target_pos_ && chk_plot_target_pos_->isChecked()) {
+            QVector<QPointF> target_batch;
+            target_batch.reserve(static_cast<int>(batch_points.size()));
+            for (const double target_point : batch_points) {
+                target_batch.append(QPointF(target_sample_t_sec, target_point));
+                target_sample_t_sec += sample_period_sec;
+            }
+            scope_->addDataBatch("target", target_batch);
+        } else {
+            target_sample_t_sec += sample_period_sec * static_cast<double>(batch_points.size());
+        }
+        scope_target_time_cursor_sec_ = target_sample_t_sec;
+
+        if (chk_plot_pos_error_ && chk_plot_pos_error_->isChecked()) {
+            const double err = last_target - displayed_actual_deg_;
+            scope_->addData("pos_error", now_t_sec, err);
+        }
+    }
+
+    if (is_prefill_phase) {
+        motion_queue_prefilled_ = true;
+    }
+
+    QMetaObject::invokeMethod(manager, "requestMotionQueueStats", Qt::QueuedConnection,
+                              Q_ARG(int, axis_id_));
 }
 
 void AxisWorkspace::setupUi() {
@@ -479,16 +607,13 @@ void AxisWorkspace::setupControlTab() {
     auto* motion_form = new QFormLayout(motion_grp);
 
     mode_combo_ = new QComboBox(motion_grp);
-    mode_combo_->addItem("Position (Generic/PP)", 1);
-    mode_combo_->addItem("CSP (EtherCAT mode 8)", 8);
-    mode_combo_->addItem("CSV (EtherCAT mode 9)", 9);
-    mode_combo_->addItem("Homing (EtherCAT mode 6)", 6);
+    mode_combo_->addItem("Position (MKS)", 1);
     mode_combo_->setFixedWidth(160);
     motion_form->addRow("Op Mode:", mode_combo_);
 
     speed_spin_ = new QSpinBox(motion_grp);
     speed_spin_->setRange(0, 3000);
-    speed_spin_->setValue(400);
+    speed_spin_->setValue(kDefaultMksSpeedRpm);
     speed_spin_->setSuffix(" RPM");
     speed_spin_->setFixedWidth(160);
     speed_spin_->installEventFilter(filter);
@@ -496,7 +621,7 @@ void AxisWorkspace::setupControlTab() {
 
     accel_spin_ = new QSpinBox(motion_grp);
     accel_spin_->setRange(0, 100);
-    accel_spin_->setValue(50);
+    accel_spin_->setValue(kDefaultMksAccelPercent);
     accel_spin_->setSuffix(" %");
     accel_spin_->setFixedWidth(160);
     accel_spin_->installEventFilter(filter);
@@ -580,6 +705,14 @@ void AxisWorkspace::setupControlTab() {
     lbl_speed_ = new QLabel("N/A", status);
     lbl_torque_ = new QLabel("N/A", status);
     lbl_error_code_ = new QLabel("N/A", status);
+    lbl_cmd_tx_rate_ = new QLabel("N/A", status);
+    lbl_telemetry_rate_ = new QLabel("N/A", status);
+    lbl_position_rx_rate_ = new QLabel("N/A", status);
+    lbl_speed_rx_rate_ = new QLabel("N/A", status);
+    lbl_status_rx_rate_ = new QLabel("N/A", status);
+    lbl_protection_rx_rate_ = new QLabel("N/A", status);
+    lbl_motion_queue_stats_ =
+        new QLabel("queue: size=0 / 0, pushed=0, dropped=0, underruns=0, short_starts=0", status);
 
     status_form->addRow("System State:", lbl_sys_state_);
     status_form->addRow("Motor Status:", lbl_state_);
@@ -589,6 +722,13 @@ void AxisWorkspace::setupControlTab() {
     status_form->addRow("Target Pos:", lbl_target_);
     status_form->addRow("Speed:", lbl_speed_);
     status_form->addRow("Torque:", lbl_torque_);
+    status_form->addRow("Cmd TX Rate:", lbl_cmd_tx_rate_);
+    status_form->addRow("Telemetry Rate:", lbl_telemetry_rate_);
+    status_form->addRow("Position RX Rate:", lbl_position_rx_rate_);
+    status_form->addRow("Speed RX Rate:", lbl_speed_rx_rate_);
+    status_form->addRow("Status RX Rate:", lbl_status_rx_rate_);
+    status_form->addRow("Protection RX Rate:", lbl_protection_rx_rate_);
+    status_form->addRow("Queue Stats:", lbl_motion_queue_stats_);
 
     top_row->addWidget(status, 2);
     layout->addLayout(top_row, 1);
@@ -616,11 +756,11 @@ void AxisWorkspace::setupControlTab() {
     chk_plot_target_pos_ = new QCheckBox("Target", scope_group);
     chk_plot_target_pos_->setChecked(true);
     chk_plot_actual_vel_ = new QCheckBox("Actual Vel", scope_group);
-    chk_plot_actual_vel_->setChecked(true);
+    chk_plot_actual_vel_->setChecked(false);
     chk_plot_target_vel_ = new QCheckBox("Target Vel", scope_group);
-    chk_plot_target_vel_->setChecked(true);
+    chk_plot_target_vel_->setChecked(false);
     chk_plot_pos_error_ = new QCheckBox("Pos Error", scope_group);
-    chk_plot_pos_error_->setChecked(true);
+    chk_plot_pos_error_->setChecked(false);
 
     scope_ctrl->addWidget(chk_plot_actual_pos_);
     scope_ctrl->addWidget(chk_plot_target_pos_);
@@ -673,7 +813,11 @@ void AxisWorkspace::setupControlTab() {
         if (lbl_scope_time_) lbl_scope_time_->setText(QString::number(sec) + " s");
     });
     connect(cmb_scope_signal_, &QComboBox::currentTextChanged, this, [this](const QString&) {
-        if (scope_) scope_->clear();
+        if (scope_) {
+            scope_->clear();
+        }
+        scope_target_time_cursor_sec_ = 0.0;
+        scope_target_time_cursor_initialized_ = false;
     });
 
     scope_layout->addLayout(scope_ctrl);
@@ -702,10 +846,12 @@ void AxisWorkspace::setupControlTab() {
                                   Q_ARG(int, axis_id_));
     });
     connect(btn_home, &QPushButton::clicked, this, [this]() {
+        clearMotionBuffersForServiceCommand(false);
         QMetaObject::invokeMethod(manager_, "goHome", Qt::QueuedConnection,
                                   Q_ARG(int, axis_id_));
     });
     connect(btn_set_zero, &QPushButton::clicked, this, [this]() {
+        clearMotionBuffersForServiceCommand(true);
         QMetaObject::invokeMethod(manager_, "setZeroPosition", Qt::QueuedConnection,
                                   Q_ARG(int, axis_id_));
     });
@@ -721,6 +867,12 @@ void AxisWorkspace::setupControlTab() {
                                   Q_ARG(int, axis_id_), Q_ARG(int, mode_code));
     });
 
+    if (manager_ && mode_combo_) {
+        const int mode_code = mode_combo_->currentData().toInt();
+        QMetaObject::invokeMethod(manager_, "setAxisMode", Qt::QueuedConnection,
+                                  Q_ARG(int, axis_id_), Q_ARG(int, mode_code));
+    }
+
     connect(target_slider_, &QSlider::valueChanged, this, [this](int raw) {
         if (!target_pos_spin_) {
             return;
@@ -734,8 +886,8 @@ void AxisWorkspace::setupControlTab() {
         manual_target_hold_until_ms_ = QDateTime::currentMSecsSinceEpoch() + 1200;
         QMetaObject::invokeMethod(manager_, "moveAbsoluteAxis", Qt::QueuedConnection,
                                   Q_ARG(int, axis_id_),
-                                  Q_ARG(int, speed_spin_ ? speed_spin_->value() : 400),
-                                  Q_ARG(int, accel_spin_ ? accel_spin_->value() : 50),
+                                  Q_ARG(int, speed_spin_ ? speed_spin_->value() : kDefaultMksSpeedRpm),
+                                  Q_ARG(int, accel_spin_ ? accel_spin_->value() : kDefaultMksAccelPercent),
                                   Q_ARG(double, v));
     });
 
@@ -757,8 +909,8 @@ void AxisWorkspace::setupControlTab() {
         const double step = jog_step_spin_ ? jog_step_spin_->value() : 1.0;
         QMetaObject::invokeMethod(manager_, "moveRelativeAxis", Qt::QueuedConnection,
                                   Q_ARG(int, axis_id_),
-                                  Q_ARG(int, speed_spin_ ? speed_spin_->value() : 400),
-                                  Q_ARG(int, accel_spin_ ? accel_spin_->value() : 50),
+                                  Q_ARG(int, speed_spin_ ? speed_spin_->value() : kDefaultMksSpeedRpm),
+                                  Q_ARG(int, accel_spin_ ? accel_spin_->value() : kDefaultMksAccelPercent),
                                   Q_ARG(double, -step));
     });
     connect(btn_jog_pos_, &QPushButton::clicked, this, [this]() {
@@ -766,8 +918,8 @@ void AxisWorkspace::setupControlTab() {
         const double step = jog_step_spin_ ? jog_step_spin_->value() : 1.0;
         QMetaObject::invokeMethod(manager_, "moveRelativeAxis", Qt::QueuedConnection,
                                   Q_ARG(int, axis_id_),
-                                  Q_ARG(int, speed_spin_ ? speed_spin_->value() : 400),
-                                  Q_ARG(int, accel_spin_ ? accel_spin_->value() : 50),
+                                  Q_ARG(int, speed_spin_ ? speed_spin_->value() : kDefaultMksSpeedRpm),
+                                  Q_ARG(int, accel_spin_ ? accel_spin_->value() : kDefaultMksAccelPercent),
                                   Q_ARG(double, step));
     });
     
@@ -781,10 +933,26 @@ void AxisWorkspace::setupControlTab() {
 }
 
 void AxisWorkspace::stopSineModeForDisable() {
+    clearMotionBuffersForServiceCommand(false);
+
+    desired_target_deg_.store(commanded_target_deg_.load(std::memory_order_relaxed), std::memory_order_relaxed);
+}
+
+void AxisWorkspace::clearMotionBuffersForServiceCommand(const bool reset_ui_to_zero) {
     {
         std::lock_guard<std::mutex> lock(trajectory_mutex_);
-        std::queue<double> empty;
+        std::deque<double> empty;
         std::swap(trajectory_queue_, empty);
+        streamed_trajectory_points_ = 0U;
+    }
+    motion_queue_prefilled_ = false;
+
+    have_prev_target_sample_ = false;
+    prev_target_sample_deg_ = 0.0;
+    prev_target_sample_time_sec_ = 0.0;
+
+    if (reset_ui_to_zero) {
+        resetUiAfterSetZero();
     }
 
     if (chk_sine_enable_ && chk_sine_enable_->isChecked()) {
@@ -794,7 +962,56 @@ void AxisWorkspace::stopSineModeForDisable() {
         onSineToggled(false);
     }
 
-    desired_target_deg_.store(commanded_target_deg_.load(std::memory_order_relaxed), std::memory_order_relaxed);
+    if (manager_) {
+        QMetaObject::invokeMethod(manager_.data(), "clearMotionQueue", Qt::QueuedConnection,
+                                  Q_ARG(int, axis_id_));
+    }
+}
+
+void AxisWorkspace::resetUiAfterSetZero() {
+    const qint64 now_ms = QDateTime::currentMSecsSinceEpoch();
+
+    displayed_actual_deg_ = 0.0;
+    desired_target_deg_.store(0.0, std::memory_order_relaxed);
+    commanded_target_deg_.store(0.0, std::memory_order_relaxed);
+    sine_center_deg_.store(0.0, std::memory_order_relaxed);
+    sine_phase_accum_rad_ = 0.0;
+    manual_target_hold_until_ms_ = now_ms + 2000;
+    telemetry_t0_ms_ = 0;
+    telemetry_t0_ns_ = 0U;
+    scope_target_time_cursor_sec_ = 0.0;
+    scope_target_time_cursor_initialized_ = false;
+    target_seeded_from_telemetry_ = true;
+
+    if (target_pos_spin_) {
+        target_pos_spin_->blockSignals(true);
+        target_pos_spin_->setValue(0.0);
+        target_pos_spin_->blockSignals(false);
+    }
+    if (target_slider_) {
+        target_slider_->blockSignals(true);
+        target_slider_->setValue(0);
+        target_slider_->blockSignals(false);
+    }
+
+    if (lbl_axis_) {
+        lbl_axis_->setText(QStringLiteral("0.00 °"));
+    }
+    if (lbl_target_) {
+        lbl_target_->setText(QStringLiteral("0.00 °"));
+    }
+    if (lbl_motion_queue_stats_) {
+        lbl_motion_queue_stats_->setText(
+            QStringLiteral("queue: size=0 / 0, pushed=0, dropped=0, underruns=0, short_starts=0"));
+        lbl_motion_queue_stats_->setStyleSheet({});
+    }
+
+    driver_queue_size_.store(0U, std::memory_order_release);
+    motion_queue_prefilled_ = false;
+
+    if (scope_) {
+        scope_->clear();
+    }
 }
 
 void AxisWorkspace::setupConfigTab() {
@@ -1041,6 +1258,7 @@ void AxisWorkspace::applyParametersPatch() {
     QList<QTreeWidgetItem*> patched_items;
     QStringList validation_errors;
     bool can_id_change_requested = false;
+    bool can_bitrate_change_requested = false;
     QStringList can_id_targets;
 
     for (auto* item : parameterItems(config_tree_)) {
@@ -1138,6 +1356,10 @@ void AxisWorkspace::applyParametersPatch() {
             can_id_change_requested = true;
             can_id_targets.push_back(parsed_value.toString());
         }
+        if (domain_value == static_cast<int>(motion_core::ParameterDomain::Mks) &&
+            parameter_value == static_cast<int>(mks::MksParameter::CanBitrateIndex)) {
+            can_bitrate_change_requested = true;
+        }
 
         patch.push_back(map);
         patched_items.push_back(item);
@@ -1166,6 +1388,20 @@ void AxisWorkspace::applyParametersPatch() {
             }
         }
 
+        if (can_bitrate_change_requested) {
+            const auto answer = QMessageBox::warning(
+                this,
+                "CAN bitrate change",
+                QString("Applying CAN bitrate change will switch communication speed for the drive.\n"
+                        "After apply, this workspace may stop receiving telemetry until manual reconnect at the new bitrate.\n\n"
+                        "Continue?"),
+                QMessageBox::Yes | QMessageBox::No,
+                QMessageBox::No);
+            if (answer != QMessageBox::Yes) {
+                return;
+            }
+        }
+
         auto* manager = manager_.data();
         QMetaObject::invokeMethod(manager, [manager, id = axis_id_, p = patch]() {
             manager->applyParameterPatch(id, p);
@@ -1184,6 +1420,12 @@ void AxisWorkspace::applyParametersPatch() {
                 this,
                 "CAN ID changed",
                 "CAN ID write requested. If telemetry freezes, perform Scan/Connect using the new CAN ID.");
+        }
+        if (can_bitrate_change_requested) {
+            QMessageBox::information(
+                this,
+                "CAN bitrate changed",
+                "CAN bitrate write requested. Reopen the CAN interface manually at the new bitrate and rescan the bus.");
         }
     }
 }
@@ -1239,7 +1481,12 @@ void AxisWorkspace::saveSelectedParameterToDriveFlash() {
         return;
     }
 
-    if (!is_persistable) {
+    const bool is_mks_runtime_persistent_parameter =
+        (domain == static_cast<int>(motion_core::ParameterDomain::Mks)
+         && (value_id == static_cast<int>(mks::MksParameter::CanId)
+             || value_id == static_cast<int>(mks::MksParameter::CanBitrateIndex)));
+
+    if (!is_persistable && !is_mks_runtime_persistent_parameter) {
         QMessageBox::information(this,
                                  "Persistent write",
                                  "Selected parameter is marked as non-persistable for runtime EEPROM save.");
@@ -1249,13 +1496,12 @@ void AxisWorkspace::saveSelectedParameterToDriveFlash() {
     const bool is_supported_parameter =
         (domain == static_cast<int>(motion_core::ParameterDomain::Ethercat)
          && value_id != static_cast<int>(motion_core::EthercatParameter::SaveParametersToEeprom))
-        || (domain == static_cast<int>(motion_core::ParameterDomain::Mks)
-            && value_id == static_cast<int>(mks::MksParameter::CanId));
+        || (domain == static_cast<int>(motion_core::ParameterDomain::Mks));
 
     if (!is_supported_parameter) {
         QMessageBox::information(this,
                                  "Persistent write",
-                                 "For now persistent write is supported for ordinary EtherCAT writable parameters and MKS CAN ID.");
+                                 "For now persistent write is supported for ordinary EtherCAT or MKS parameters.");
         return;
     }
 
@@ -1290,13 +1536,25 @@ void AxisWorkspace::saveSelectedParameterToDriveFlash() {
         return;
     }
 
+    QString warning_text = QString(
+        "Write %1=%2 and store it persistently?\n"
+        "Use this only if you are sure the selected value is correct.")
+            .arg(parameter_name.isEmpty() ? QStringLiteral("parameter") : parameter_name)
+            .arg(parsed_value.toString());
+
+    if (domain == static_cast<int>(motion_core::ParameterDomain::Mks)
+        && value_id == static_cast<int>(mks::MksParameter::CanId)) {
+        warning_text += QStringLiteral("\n\nAfter write, the axis will be reachable only via the new CAN ID.");
+    }
+    if (domain == static_cast<int>(motion_core::ParameterDomain::Mks)
+        && value_id == static_cast<int>(mks::MksParameter::CanBitrateIndex)) {
+        warning_text += QStringLiteral("\n\nAfter write, manual CAN reconnect at the new bitrate is required.");
+    }
+
     const auto answer = QMessageBox::warning(
         this,
         "Persistent write",
-        QString("Write %1=%2 and store it persistently?\n"
-                "Use this only if you are sure the selected value is correct.")
-            .arg(parameter_name.isEmpty() ? QStringLiteral("parameter") : parameter_name)
-            .arg(parsed_value.toString()),
+        warning_text,
         QMessageBox::Yes | QMessageBox::No,
         QMessageBox::No);
     if (answer != QMessageBox::Yes) {
@@ -1324,22 +1582,47 @@ void AxisWorkspace::onSineToggled(bool enabled) {
     if (manager_ && enabled) {
         {
             std::lock_guard<std::mutex> lock(trajectory_mutex_);
-            std::queue<double> empty;
+            std::deque<double> empty;
             std::swap(trajectory_queue_, empty);
+            streamed_trajectory_points_ = 0U;
         }
+        motion_queue_prefilled_ = false;
+        driver_queue_size_.store(0U, std::memory_order_release);
         
         const double start_center_deg = displayed_actual_deg_;
         sine_center_deg_.store(start_center_deg, std::memory_order_relaxed);
         desired_target_deg_.store(start_center_deg, std::memory_order_relaxed);
         commanded_target_deg_.store(start_center_deg, std::memory_order_relaxed);
         sine_phase_accum_rad_ = 0.0;
+        scope_target_time_cursor_sec_ = 0.0;
+        scope_target_time_cursor_initialized_ = false;
         last_sine_ui_sync_ms_.store(0, std::memory_order_release);
+
+        ensureMotionQueueConfigured();
+        QMetaObject::invokeMethod(manager_.data(), "clearMotionQueue", Qt::QueuedConnection,
+                                  Q_ARG(int, axis_id_));
         
         QFile::remove("sine_dump.csv");
         fillTrajectoryQueue(); // Pre-calculate the first segment immediately
+        flushTrajectoryBatchToRuntime();
     }
 
     if (!enabled) {
+        {
+            std::lock_guard<std::mutex> lock(trajectory_mutex_);
+            std::deque<double> empty;
+            std::swap(trajectory_queue_, empty);
+            streamed_trajectory_points_ = 0U;
+        }
+        motion_queue_prefilled_ = false;
+        if (manager_) {
+            QMetaObject::invokeMethod(manager_.data(), "clearMotionQueue", Qt::QueuedConnection,
+                                      Q_ARG(int, axis_id_));
+            QMetaObject::invokeMethod(manager_.data(), "requestMotionQueueStats", Qt::QueuedConnection,
+                                      Q_ARG(int, axis_id_));
+        }
+        scope_target_time_cursor_sec_ = 0.0;
+        scope_target_time_cursor_initialized_ = false;
         desired_target_deg_.store(commanded_target_deg_.load(std::memory_order_relaxed), std::memory_order_relaxed);
     }
 }
@@ -1347,9 +1630,9 @@ void AxisWorkspace::onSineToggled(bool enabled) {
 void AxisWorkspace::fillTrajectoryQueue() {
     if (!sine_enabled_.load(std::memory_order_acquire)) return;
 
-    constexpr int kTargetDtMs = 4;
-    constexpr double kTargetDtSec = kTargetDtMs / 1000.0;
-    constexpr size_t kTargetBufferSize = 250; // 1 second buffer (250 * 4ms)
+    constexpr int dt_us = kUiTrajectoryLoopPeriodUs;
+    const double kTargetDtSecFine = static_cast<double>(dt_us) / 1'000'000.0;
+    constexpr size_t kTargetBufferSize = kUiTrajectorySourceBufferSize;
 
     size_t current_size = 0;
     {
@@ -1374,7 +1657,7 @@ void AxisWorkspace::fillTrajectoryQueue() {
     }
 
     for (size_t i = start_index; i < kTargetBufferSize; ++i) {
-        sine_phase_accum_rad_ += 2.0 * M_PI * target_freq * kTargetDtSec;
+        sine_phase_accum_rad_ += 2.0 * M_PI * target_freq * kTargetDtSecFine;
         if (sine_phase_accum_rad_ > 2.0 * M_PI) {
             sine_phase_accum_rad_ = std::fmod(sine_phase_accum_rad_, 2.0 * M_PI);
         }
@@ -1384,102 +1667,8 @@ void AxisWorkspace::fillTrajectoryQueue() {
     {
         std::lock_guard<std::mutex> lock(trajectory_mutex_);
         for (double p : new_points) {
-            trajectory_queue_.push(p);
+            trajectory_queue_.push_back(p);
         }
-    }
-}
-
-void AxisWorkspace::trajectoryLoop() {
-    constexpr int kTargetDtMs = 4; // 250Hz target loop
-    
-    auto next_wakeup = std::chrono::steady_clock::now();
-
-    while (trajectory_thread_active_.load()) {
-        const auto now = std::chrono::steady_clock::now();
-        if (now > next_wakeup + std::chrono::milliseconds(kTargetDtMs * 4)) {
-            // If scheduler/OS caused a large delay, re-sync and skip catch-up burst.
-            next_wakeup = now;
-        }
-        next_wakeup += std::chrono::milliseconds(kTargetDtMs);
-        
-        if (!manager_) {
-            std::this_thread::sleep_until(next_wakeup);
-            continue;
-        }
-
-        bool has_target = false;
-        double new_target = 0.0;
-
-        {
-            std::lock_guard<std::mutex> lock(trajectory_mutex_);
-            if (!trajectory_queue_.empty()) {
-                new_target = trajectory_queue_.front();
-                trajectory_queue_.pop();
-                has_target = true;
-            }
-        }
-
-        if (has_target) {
-            desired_target_deg_.store(new_target, std::memory_order_relaxed);
-            
-            QMetaObject::invokeMethod(manager_.data(), "moveAbsoluteAxis", Qt::QueuedConnection,
-                                  Q_ARG(int, axis_id_),
-                                  Q_ARG(int, current_speed_.load(std::memory_order_relaxed)),
-                                  Q_ARG(int, current_accel_.load(std::memory_order_relaxed)),
-                                  Q_ARG(double, new_target));
-
-            const qint64 now_ms = QDateTime::currentMSecsSinceEpoch();
-            const bool sine_active = sine_enabled_.load(std::memory_order_acquire);
-            const qint64 last_sync_ms = last_sine_ui_sync_ms_.load(std::memory_order_acquire);
-            const bool should_sync_ui = !sine_active || (now_ms - last_sync_ms >= 80);
-            if (should_sync_ui) {
-                last_sine_ui_sync_ms_.store(now_ms, std::memory_order_release);
-                QMetaObject::invokeMethod(this, [this, new_target](){
-                    if (target_pos_spin_) {
-                        target_pos_spin_->blockSignals(true);
-                        target_pos_spin_->setValue(new_target);
-                        target_pos_spin_->blockSignals(false);
-                    }
-                    if (target_slider_) {
-                        target_slider_->blockSignals(true);
-                        target_slider_->setValue(static_cast<int>(std::llround(new_target * 100.0)));
-                        target_slider_->blockSignals(false);
-                    }
-                }, Qt::QueuedConnection);
-            }
-            
-        } else {
-            // Keep last desired target from atomic state; avoid blocking UI calls from worker thread.
-            desired_target_deg_.store(desired_target_deg_.load(std::memory_order_relaxed), std::memory_order_relaxed);
-        }
-        
-        commanded_target_deg_.store(desired_target_deg_.load(std::memory_order_relaxed), std::memory_order_relaxed);
-        double cmd_tgt = commanded_target_deg_.load(std::memory_order_relaxed);
-        
-        double t_sec = 0.0;
-        if (telemetry_t0_ms_ > 0) {
-            t_sec = static_cast<double>(QDateTime::currentMSecsSinceEpoch() - telemetry_t0_ms_) / 1000.0;
-        }
-
-        if (has_target && telemetry_t0_ms_ > 0) {
-            QMetaObject::invokeMethod(this, [this, t_sec, cmd_tgt]() {
-                if (!scope_) return;
-                if (chk_plot_target_pos_ && chk_plot_target_pos_->isChecked()) {
-                    scope_->addData("target", t_sec, cmd_tgt);
-                }
-                if (chk_plot_target_vel_ && chk_plot_target_vel_->isChecked()) {
-                    if (have_prev_target_sample_ && (t_sec - prev_target_sample_time_sec_) > 1e-6) {
-                        const double target_vel = (cmd_tgt - prev_target_sample_deg_) / (t_sec - prev_target_sample_time_sec_);
-                        scope_->addData("target_speed", t_sec, target_vel);
-                    }
-                    prev_target_sample_deg_ = cmd_tgt;
-                    prev_target_sample_time_sec_ = t_sec;
-                    have_prev_target_sample_ = true;
-                }
-            }, Qt::QueuedConnection);
-        }
-        
-        std::this_thread::sleep_until(next_wakeup);
     }
 }
 
@@ -1509,24 +1698,104 @@ void AxisWorkspace::triggerAbsoluteMove() {
     desired_target_deg_.store(manual_target, std::memory_order_relaxed);
     commanded_target_deg_.store(manual_target, std::memory_order_relaxed);
     manual_target_hold_until_ms_ = QDateTime::currentMSecsSinceEpoch() + 1200;
-    
+
     if (radio_move_rel_ && radio_move_rel_->isChecked()) {
         QMetaObject::invokeMethod(manager_, "moveRelativeAxis", Qt::QueuedConnection,
                                   Q_ARG(int, axis_id_),
-                                  Q_ARG(int, speed_spin_ ? speed_spin_->value() : 400),
-                                  Q_ARG(int, accel_spin_ ? accel_spin_->value() : 50),
+                                  Q_ARG(int, speed_spin_ ? speed_spin_->value() : kDefaultMksSpeedRpm),
+                                  Q_ARG(int, accel_spin_ ? accel_spin_->value() : kDefaultMksAccelPercent),
                                   Q_ARG(double, manual_target));
     } else {
         QMetaObject::invokeMethod(manager_, "moveAbsoluteAxis", Qt::QueuedConnection,
                                   Q_ARG(int, axis_id_),
-                                  Q_ARG(int, speed_spin_ ? speed_spin_->value() : 400),
-                                  Q_ARG(int, accel_spin_ ? accel_spin_->value() : 50),
+                                  Q_ARG(int, speed_spin_ ? speed_spin_->value() : kDefaultMksSpeedRpm),
+                                  Q_ARG(int, accel_spin_ ? accel_spin_->value() : kDefaultMksAccelPercent),
                                   Q_ARG(double, manual_target));
     }
 }
 
 bool AxisWorkspace::isTargetReached(double tolerance_deg) const {
     return std::abs(displayed_actual_deg_ - (target_pos_spin_ ? target_pos_spin_->value() : 0)) <= tolerance_deg;
+}
+
+void AxisWorkspace::onMotionQueueStatsUpdated(const int axis_id, const QVariantMap& stats) {
+    if (axis_id != axis_id_ || !lbl_motion_queue_stats_) {
+        return;
+    }
+    const auto size = stats.value("size").toULongLong();
+    const auto capacity = stats.value("capacity").toULongLong();
+    const auto pushed = stats.value("pushed").toULongLong();
+    const auto dropped = stats.value("dropped").toULongLong();
+    const auto underruns = stats.value("underruns").toULongLong();
+    const auto short_starts = stats.value("short_starts").toULongLong();
+    
+    driver_queue_size_.store(size, std::memory_order_release);
+    if (!motion_queue_prefilled_ && size >= kMotionQueuePrefillSamples) {
+        motion_queue_prefilled_ = true;
+    }
+
+    if (underruns > last_driver_underruns_) {
+        const auto new_underruns = underruns - last_driver_underruns_;
+        if (manager_) {
+            const QString message = QString("Axis %1 streaming underrun detected: queue emptied (%2 new, size=%3 / %4)")
+                                        .arg(axis_id_)
+                                        .arg(new_underruns)
+                                        .arg(size)
+                                        .arg(capacity);
+            auto* manager = manager_.data();
+            QMetaObject::invokeMethod(
+                manager,
+                [manager, message]() {
+                    if (!manager) {
+                        return;
+                    }
+                    emit manager->logMessage(QStringLiteral("mks"), message);
+                },
+                Qt::QueuedConnection);
+        }
+    }
+    last_driver_underruns_ = underruns;
+
+    if (short_starts > last_driver_short_starts_) {
+        const auto new_short_starts = short_starts - last_driver_short_starts_;
+        if (manager_) {
+            const QString message =
+                QString("Axis %1 streaming short-start detected: started before full pre-buffer was ready "
+                        "(%2 new, size=%3 / %4)")
+                    .arg(axis_id_)
+                    .arg(new_short_starts)
+                    .arg(size)
+                    .arg(capacity);
+            auto* manager = manager_.data();
+            QMetaObject::invokeMethod(
+                manager,
+                [manager, message]() {
+                    if (!manager) {
+                        return;
+                    }
+                    emit manager->logMessage(QStringLiteral("mks"), message);
+                },
+                Qt::QueuedConnection);
+        }
+    }
+    last_driver_short_starts_ = short_starts;
+
+    if (size == 0U) {
+        lbl_motion_queue_stats_->setStyleSheet(QStringLiteral("color: #da3633; font-weight: bold;"));
+    } else if (size < 30U) {
+        lbl_motion_queue_stats_->setStyleSheet(QStringLiteral("color: #d29922; font-weight: bold;"));
+    } else {
+        lbl_motion_queue_stats_->setStyleSheet(QString{});
+    }
+
+    lbl_motion_queue_stats_->setText(
+        QString("queue: size=%1 / %2, pushed=%3, dropped=%4, underruns=%5, short_starts=%6")
+            .arg(size)
+            .arg(capacity)
+            .arg(pushed)
+            .arg(dropped)
+            .arg(underruns)
+            .arg(short_starts));
 }
 
 void AxisWorkspace::onTelemetryUpdated(int axis_id, const QVariantMap& telemetry) {
@@ -1553,8 +1822,12 @@ void AxisWorkspace::onTelemetryUpdated(int axis_id, const QVariantMap& telemetry
     const int error_code = telemetry.value("error_code").toInt();
 
     const qint64 now_ms = QDateTime::currentMSecsSinceEpoch();
+    const std::uint64_t telemetry_now_ns = telemetry.value("timestamp_ns").toULongLong();
     if (telemetry_t0_ms_ == 0) {
         telemetry_t0_ms_ = now_ms;
+    }
+    if (telemetry_t0_ns_ == 0U && telemetry_now_ns != 0U) {
+        telemetry_t0_ns_ = telemetry_now_ns;
     }
     const double t_sec = static_cast<double>(now_ms - telemetry_t0_ms_) / 1000.0;
 
@@ -1571,14 +1844,46 @@ void AxisWorkspace::onTelemetryUpdated(int axis_id, const QVariantMap& telemetry
         scope_->setChannelVisibility("target_speed", show_velocity && chk_plot_target_vel_ && chk_plot_target_vel_->isChecked());
         scope_->setChannelVisibility("torque", show_torque && chk_plot_actual_vel_ && chk_plot_actual_vel_->isChecked());
 
-        if (show_position && chk_plot_actual_pos_ && chk_plot_actual_pos_->isChecked() && telemetry.contains("axis")) {
-            scope_->addData("actual", t_sec, telemetry.value("axis").toDouble());
+        if (show_position && chk_plot_actual_pos_ && chk_plot_actual_pos_->isChecked()) {
+            bool added_from_batch = false;
+            if (telemetry.contains("position_samples") && telemetry_t0_ns_ != 0U) {
+                const QVariantList samples = telemetry.value("position_samples").toList();
+                QVector<QPointF> actual_batch;
+                actual_batch.reserve(samples.size());
+                for (const auto& sample_variant : samples) {
+                    const QVariantMap sample = sample_variant.toMap();
+                    const std::uint64_t sample_ns = sample.value("timestamp_ns").toULongLong();
+                    if (sample_ns == 0U || sample_ns < telemetry_t0_ns_) {
+                        continue;
+                    }
+                    const double sample_t_sec =
+                        static_cast<double>(sample_ns - telemetry_t0_ns_) / 1'000'000'000.0;
+                    actual_batch.append(QPointF(sample_t_sec, sample.value("position_deg").toDouble()));
+                }
+                if (!actual_batch.isEmpty()) {
+                    scope_->addDataBatch("actual", actual_batch);
+                    added_from_batch = true;
+                }
+            }
+
+            if (!added_from_batch && telemetry.contains("axis")) {
+                scope_->addData("actual", t_sec, telemetry.value("axis").toDouble());
+            }
         }
-        if (show_position && chk_plot_target_pos_ && chk_plot_target_pos_->isChecked() && telemetry.contains("target") && !chk_sine_enable_->isChecked()) {
-            scope_->addData("target", t_sec, telemetry.value("target").toDouble());
+        const bool sine_mode_active = chk_sine_enable_ && chk_sine_enable_->isChecked();
+        const bool has_target_sample = telemetry.contains("target");
+        const double target_for_plot = (!sine_mode_active && has_target_sample)
+            ? telemetry.value("target").toDouble()
+            : desired_target_deg_.load(std::memory_order_relaxed);
+
+        if (show_position
+            && chk_plot_target_pos_
+            && chk_plot_target_pos_->isChecked()
+            && !sine_mode_active) {
+            scope_->addData("target", t_sec, target_for_plot);
         }
-        if (show_position && chk_plot_pos_error_ && chk_plot_pos_error_->isChecked() && telemetry.contains("axis") && telemetry.contains("target")) {
-            const double err = telemetry.value("target").toDouble() - telemetry.value("axis").toDouble();
+        if (show_position && chk_plot_pos_error_ && chk_plot_pos_error_->isChecked() && telemetry.contains("axis")) {
+            const double err = target_for_plot - telemetry.value("axis").toDouble();
             scope_->addData("pos_error", t_sec, err);
         }
         if (show_velocity && chk_plot_actual_vel_ && chk_plot_actual_vel_->isChecked() && telemetry.contains("speed")) {
@@ -1638,6 +1943,64 @@ void AxisWorkspace::onTelemetryUpdated(int axis_id, const QVariantMap& telemetry
     }
     if (telemetry.contains("error_code") && lbl_error_code_) {
         lbl_error_code_->setText(decodeErrorCodeText(transport, error_code));
+    }
+
+    auto format_rate_period = [](const double hz, const double period_ms) {
+        return QString("%1 Hz (%2 ms)").arg(hz, 0, 'f', 1).arg(period_ms, 0, 'f', 1);
+    };
+
+    if (lbl_cmd_tx_rate_) {
+        if (telemetry.contains("cmd_tx_hz") && telemetry.contains("cmd_tx_period_ms")) {
+            lbl_cmd_tx_rate_->setText(format_rate_period(telemetry.value("cmd_tx_hz").toDouble(),
+                                                         telemetry.value("cmd_tx_period_ms").toDouble()));
+        } else {
+            lbl_cmd_tx_rate_->setText(QStringLiteral("N/A"));
+        }
+    }
+
+    if (lbl_telemetry_rate_) {
+        if (telemetry.contains("telemetry_publish_hz") && telemetry.contains("telemetry_publish_period_ms")) {
+            lbl_telemetry_rate_->setText(
+                format_rate_period(telemetry.value("telemetry_publish_hz").toDouble(),
+                                   telemetry.value("telemetry_publish_period_ms").toDouble()));
+        } else {
+            lbl_telemetry_rate_->setText(QStringLiteral("N/A"));
+        }
+    }
+
+    if (lbl_position_rx_rate_) {
+        if (telemetry.contains("position_rx_hz") && telemetry.contains("position_rx_period_ms")) {
+            lbl_position_rx_rate_->setText(
+                format_rate_period(telemetry.value("position_rx_hz").toDouble(),
+                                   telemetry.value("position_rx_period_ms").toDouble()));
+        } else {
+            lbl_position_rx_rate_->setText(QStringLiteral("N/A"));
+        }
+    }
+
+    if (lbl_speed_rx_rate_) {
+        if (telemetry.contains("speed_rx_hz")) {
+            lbl_speed_rx_rate_->setText(QString("%1 Hz").arg(telemetry.value("speed_rx_hz").toDouble(), 0, 'f', 1));
+        } else {
+            lbl_speed_rx_rate_->setText(QStringLiteral("N/A"));
+        }
+    }
+
+    if (lbl_status_rx_rate_) {
+        if (telemetry.contains("status_rx_hz")) {
+            lbl_status_rx_rate_->setText(QString("%1 Hz").arg(telemetry.value("status_rx_hz").toDouble(), 0, 'f', 1));
+        } else {
+            lbl_status_rx_rate_->setText(QStringLiteral("N/A"));
+        }
+    }
+
+    if (lbl_protection_rx_rate_) {
+        if (telemetry.contains("protection_rx_hz")) {
+            lbl_protection_rx_rate_->setText(
+                QString("%1 Hz").arg(telemetry.value("protection_rx_hz").toDouble(), 0, 'f', 1));
+        } else {
+            lbl_protection_rx_rate_->setText(QStringLiteral("N/A"));
+        }
     }
 }
 

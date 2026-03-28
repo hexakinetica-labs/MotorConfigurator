@@ -1,7 +1,7 @@
 #include "init_all_drivers.h"
 
-#include "mks/adapter/mks_runtime_factory.h"
-#include "mks/manager/mks_topology_scanner.h"
+#include "mks_can/adapter/mks_runtime_factory.h"
+#include "mks_can/manager/mks_topology_scanner.h"
 #include "ethercat/manager/ethercat_runtime_factory.h"
 #include "ethercat/manager/ethercat_bus_manager.h"
 #include "motion_core/runtime_factory_registry.h"

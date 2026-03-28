@@ -1,5 +1,5 @@
 #include "init_all_drivers.h"
-#include "mks/internal/port/gs_usb_can_port.h"
+#include "mks_can/internal/port/gs_usb_can_port.h"
 #include "motion_core/hal_runtime.h"
 #include "motion_core/config/hal_runtime_config_json.h"
 

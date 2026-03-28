@@ -1,7 +1,8 @@
 #include "mks/axis_manager.h"
 
 #include "ethercat/p100e_ethercat_dictionary.h"
-#include "mks/dictionary/mks_dictionary.h"
+#include "mks_can/adapter/mks_axis_adapter.h"
+#include "mks_can/dictionary/mks_dictionary.h"
 #include "motion_core/config/hal_runtime_config_json.h"
 
 #include <QMetaObject>
@@ -16,6 +17,8 @@
 
 namespace {
 
+constexpr std::size_t kMaxUiPositionSamplesPerTick = 512U;
+
 [[nodiscard]] motion_core::Result<motion_core::PersistentCommand> persistent_command_for_parameter(
     const int domain,
     const int value) {
@@ -29,6 +32,12 @@ namespace {
         && value == static_cast<int>(mks::MksParameter::CanId)) {
         return motion_core::Result<motion_core::PersistentCommand>::success(
             motion_core::PersistentCommand::CanId);
+    }
+
+    if (domain == static_cast<int>(motion_core::ParameterDomain::Mks)
+        && value == static_cast<int>(mks::MksParameter::CanBitrateIndex)) {
+        return motion_core::Result<motion_core::PersistentCommand>::success(
+            motion_core::PersistentCommand::CanBitrate);
     }
 
     return motion_core::Result<motion_core::PersistentCommand>::failure(
@@ -106,6 +115,17 @@ QVariant paramValueToVariant(const motion_core::ParameterValue& val) {
         case motion_core::ParameterValueType::Boolean: return val.bool_value;
     }
     return {};
+}
+
+QVariantMap motionQueueStatsToVariantMap(const motion_core::MotionQueueStats& stats) {
+    QVariantMap out;
+    out["size"] = static_cast<qulonglong>(stats.size);
+    out["capacity"] = static_cast<qulonglong>(stats.capacity);
+    out["pushed"] = static_cast<qulonglong>(stats.pushed);
+    out["dropped"] = static_cast<qulonglong>(stats.dropped);
+    out["underruns"] = static_cast<qulonglong>(stats.underruns);
+    out["short_starts"] = static_cast<qulonglong>(stats.short_starts);
+    return out;
 }
 
 motion_core::ParameterValue variantToParamValue(const QVariant& var, const motion_core::ParameterDescriptor* desc) {
@@ -195,7 +215,10 @@ void AxisManager::applySafetyBaselineForAxis(const int axis_id, const QString& r
         return;
     }
     auto axis = axis_res.value();
-    if (force_disable) {
+    const auto transport = axis->info().transport;
+    const bool should_force_disable = force_disable
+        && transport == motion_core::AxisTransportKind::Ethercat;
+    if (should_force_disable) {
         const auto disable_res = axis->set_enabled(false);
         if (!disable_res.ok()) {
             emit logMessage(current_transport_tag(),QString("Axis %1 disable in safety baseline failed (%2): %3")
@@ -233,6 +256,7 @@ motion_core::Result<void> AxisManager::closeRuntimeInternal() {
 void AxisManager::reset_runtime_state() {
     runtime_started_axes_.clear();
     runtime_known_axes_.clear();
+    ui_priority_axis_id_ = -1;
     (void)closeRuntimeInternal();
 }
 
@@ -291,6 +315,7 @@ void AxisManager::closeDevice() {
     if (fast_timer_) fast_timer_->stop();
     if (slow_timer_) slow_timer_->stop();
     watched_axes_.clear();
+    ui_priority_axis_id_ = -1;
     rr_index_ = 0;
     reset_runtime_state();
     opened_device_path_.clear();
@@ -477,7 +502,20 @@ void AxisManager::scanEthercatMotors() {
 
 void AxisManager::watchAxis(int axis_id, bool enabled) {
     if (axis_id < 1 || axis_id > 2047) return;
-    if (enabled) watched_axes_.insert(axis_id); else watched_axes_.remove(axis_id);
+    if (enabled) {
+        watched_axes_.insert(axis_id);
+        ui_priority_axis_id_ = axis_id;
+        return;
+    }
+
+    watched_axes_.remove(axis_id);
+    if (ui_priority_axis_id_ == axis_id) {
+        if (watched_axes_.isEmpty()) {
+            ui_priority_axis_id_ = -1;
+        } else {
+            ui_priority_axis_id_ = *watched_axes_.cbegin();
+        }
+    }
 }
 
 void AxisManager::enableMotor(int axis_id, bool enabled) {
@@ -541,6 +579,108 @@ void AxisManager::moveRelativeAxis(int axis_id, int speed, int accel, double del
     cmd.profile_accel_percent = std::clamp(static_cast<double>(accel), 0.0, 100.0);
     const auto res = axis_res.value()->apply_command(cmd);
     if (!res.ok()) emit logMessage(current_transport_tag(),QString("Axis %1 relative move failed: %2").arg(axis_id).arg(res.error().message));
+}
+
+void AxisManager::configureMotionQueue(const int axis_id, const int capacity, const bool drop_oldest) {
+    const auto axis_res = findAxis(static_cast<std::uint16_t>(axis_id));
+    if (!axis_res.ok()) {
+        emit logMessage(current_transport_tag(), QString("Axis %1 configure queue failed: %2")
+                            .arg(axis_id)
+                            .arg(axis_res.error().message));
+        return;
+    }
+    const auto result = axis_res.value()->configure_motion_queue(
+        static_cast<std::size_t>(std::max(1, capacity)),
+        drop_oldest);
+    if (!result.ok()) {
+        emit logMessage(current_transport_tag(), QString("Axis %1 configure queue failed: %2")
+                            .arg(axis_id)
+                            .arg(result.error().message));
+        return;
+    }
+    requestMotionQueueStats(axis_id);
+}
+
+void AxisManager::enqueueMotionBatch(const int axis_id, const QVariantList& points) {
+    const auto axis_res = findAxis(static_cast<std::uint16_t>(axis_id));
+    if (!axis_res.ok()) {
+        emit logMessage(current_transport_tag(), QString("Axis %1 enqueue batch failed: %2")
+                            .arg(axis_id)
+                            .arg(axis_res.error().message));
+        return;
+    }
+
+    std::vector<motion_core::QueuedSetpoint> batch;
+    batch.reserve(static_cast<std::size_t>(points.size()));
+    for (const auto& point_variant : points) {
+        const QVariantMap map = point_variant.toMap();
+        if (!map.contains("target_position_deg")) {
+            continue;
+        }
+
+        motion_core::QueuedSetpoint point{};
+        point.target_position_deg = map.value("target_position_deg").toDouble();
+        if (map.contains("has_profile_speed_rpm") && map.value("has_profile_speed_rpm").toBool()) {
+            point.has_profile_speed_rpm = true;
+            point.profile_speed_rpm = static_cast<std::uint16_t>(
+                std::clamp(map.value("profile_speed_rpm").toInt(), 0, 3000));
+        }
+        if (map.contains("has_profile_accel_percent") && map.value("has_profile_accel_percent").toBool()) {
+            point.has_profile_accel_percent = true;
+            point.profile_accel_percent = std::clamp(map.value("profile_accel_percent").toDouble(), 0.0, 100.0);
+        }
+        if (map.contains("has_target_velocity") && map.value("has_target_velocity").toBool()) {
+            point.has_target_velocity = true;
+            point.target_velocity_deg_per_sec = map.value("target_velocity_deg_per_sec").toDouble();
+        }
+        if (map.contains("sample_period_sec")) {
+            point.sample_period_sec = std::clamp(map.value("sample_period_sec").toDouble(), 0.001, 0.100);
+        }
+        batch.push_back(point);
+    }
+
+    if (batch.empty()) {
+        return;
+    }
+
+    const auto result = axis_res.value()->enqueue_motion_batch(batch);
+    if (!result.ok()) {
+        emit logMessage(current_transport_tag(), QString("Axis %1 enqueue batch failed: %2")
+                            .arg(axis_id)
+                            .arg(result.error().message));
+        return;
+    }
+
+    emit motionQueueStatsUpdated(axis_id, motionQueueStatsToVariantMap(result.value()));
+}
+
+void AxisManager::clearMotionQueue(const int axis_id) {
+    const auto axis_res = findAxis(static_cast<std::uint16_t>(axis_id));
+    if (!axis_res.ok()) {
+        return;
+    }
+    const auto result = axis_res.value()->clear_motion_queue();
+    if (!result.ok()) {
+        emit logMessage(current_transport_tag(), QString("Axis %1 clear queue failed: %2")
+                            .arg(axis_id)
+                            .arg(result.error().message));
+    }
+    requestMotionQueueStats(axis_id);
+}
+
+void AxisManager::requestMotionQueueStats(const int axis_id) {
+    const auto axis_res = findAxis(static_cast<std::uint16_t>(axis_id));
+    if (!axis_res.ok()) {
+        return;
+    }
+    const auto stats_result = axis_res.value()->query_motion_queue_stats();
+    if (!stats_result.ok()) {
+        emit logMessage(current_transport_tag(), QString("Axis %1 queue stats failed: %2")
+                            .arg(axis_id)
+                            .arg(stats_result.error().message));
+        return;
+    }
+    emit motionQueueStatsUpdated(axis_id, motionQueueStatsToVariantMap(stats_result.value()));
 }
 
 void AxisManager::setAxisMode(int axis_id, int mode_code) {
@@ -759,6 +899,144 @@ void AxisManager::setPersistentParameter(int axis_id, int domain, int value, con
                 axis_id,
                 persistent_command,
                 persistent_res.value());
+            QMetaObject::invokeMethod(
+                self,
+                [self, axis_id, message]() {
+                    if (!self) return;
+                    self->completeParameterWriteSuccess(axis_id, message, true);
+                },
+                Qt::QueuedConnection);
+        }).detach();
+        return;
+    }
+
+    if (domain == static_cast<int>(motion_core::ParameterDomain::Mks)) {
+        const auto parameter_id = motion_core::make_parameter_id(
+            motion_core::ParameterDomain::Mks,
+            static_cast<std::uint32_t>(value));
+
+        const auto descriptors_result = axis_res.value()->list_parameters();
+        if (!descriptors_result.ok()) {
+            emit logMessage(current_transport_tag(),QString("Axis %1 persistent write failed: %2")
+                                .arg(axis_id)
+                                .arg(QString::fromStdString(descriptors_result.error().message)));
+            return;
+        }
+
+        const motion_core::ParameterDescriptor* selected_descriptor = nullptr;
+        for (const auto& descriptor : descriptors_result.value()) {
+            if (descriptor.id.domain == parameter_id.domain && descriptor.id.value == parameter_id.value) {
+                selected_descriptor = &descriptor;
+                break;
+            }
+        }
+        if (!selected_descriptor || selected_descriptor->read_only || !selected_descriptor->persistable) {
+            emit logMessage(current_transport_tag(),QString("Axis %1 persistent write failed: descriptor is read-only or missing").arg(axis_id));
+            return;
+        }
+
+        motion_core::ParameterPatch patch{};
+        patch.entries.push_back({parameter_id, variantToParamValue(data, selected_descriptor)});
+
+        if (parameter_writes_in_progress_.contains(axis_id)) {
+            emit logMessage(current_transport_tag(),QString("Axis %1 parameter write already in progress").arg(axis_id));
+            return;
+        }
+
+        parameter_writes_in_progress_.insert(axis_id);
+        const auto parameter_label = QString::fromUtf8(selected_descriptor->name);
+        emit logMessage(current_transport_tag(),QString("Axis %1 persistent %2 write started")
+                            .arg(axis_id)
+                            .arg(parameter_label));
+
+        QPointer<AxisManager> self(this);
+        auto axis = axis_res.value();
+        const auto requested_value = patch.entries.front().value;
+        std::thread([self, axis_id, axis, patch, parameter_id, requested_value, parameter_label]() {
+            const auto apply_result = axis->apply_parameter_patch(patch);
+            if (!self) {
+                return;
+            }
+
+            if (!apply_result.ok()) {
+                const QString message = QString("Axis %1 persistent %2 write failed: %3")
+                                            .arg(axis_id)
+                                            .arg(parameter_label)
+                                            .arg(QString::fromStdString(apply_result.error().message));
+                QMetaObject::invokeMethod(
+                    self,
+                    [self, axis_id, message]() {
+                        if (!self) return;
+                        self->completeParameterWriteFailure(axis_id, message);
+                    },
+                    Qt::QueuedConnection);
+                return;
+            }
+
+            const auto readback_result = axis->read_parameters();
+            if (!readback_result.ok()) {
+                const QString message = QString("Axis %1 persistent %2 write failed: %3")
+                                            .arg(axis_id)
+                                            .arg(parameter_label)
+                                            .arg(QString::fromStdString(readback_result.error().message));
+                QMetaObject::invokeMethod(
+                    self,
+                    [self, axis_id, message]() {
+                        if (!self) return;
+                        self->completeParameterWriteFailure(axis_id, message);
+                    },
+                    Qt::QueuedConnection);
+                return;
+            }
+
+            motion_core::PersistentWriteReport report{};
+            report.command_supported = true;
+            report.write_completed = true;
+            report.persistent_save_completed = true; // MKS intrinsically saves to flash on write
+            report.power_cycle_required = false;
+
+            bool found_readback = false;
+            for (const auto& entry : readback_result.value().entries) {
+                if (entry.id.domain == parameter_id.domain && entry.id.value == parameter_id.value) {
+                    report.readback_value = entry.value;
+                    report.readback_verified = parameter_value_matches_requested(requested_value, entry.value);
+                    found_readback = true;
+                    break;
+                }
+            }
+
+            if (!found_readback) {
+                const QString message = QString("Axis %1 persistent %2 write failed: readback parameter not found")
+                                            .arg(axis_id)
+                                            .arg(parameter_label);
+                QMetaObject::invokeMethod(
+                    self,
+                    [self, axis_id, message]() {
+                        if (!self) return;
+                        self->completeParameterWriteFailure(axis_id, message);
+                    },
+                    Qt::QueuedConnection);
+                return;
+            }
+
+            if (!report.readback_verified) {
+                const QString message = QString("Axis %1 persistent %2 write failed: readback does not match requested value")
+                                            .arg(axis_id)
+                                            .arg(parameter_label);
+                QMetaObject::invokeMethod(
+                    self,
+                    [self, axis_id, message]() {
+                        if (!self) return;
+                        self->completeParameterWriteFailure(axis_id, message);
+                    },
+                    Qt::QueuedConnection);
+                return;
+            }
+
+            const QString message = persistent_write_report_message(
+                axis_id,
+                parameter_label,
+                report);
             QMetaObject::invokeMethod(
                 self,
                 [self, axis_id, message]() {
@@ -1078,32 +1356,85 @@ void AxisManager::onFastTick() {
     if (watched_axes_.isEmpty()) return;
     const QList<int> ids = watched_axes_.values();
     if (ids.isEmpty()) return;
-    rr_index_ %= ids.size();
-    const int axis_id = ids.at(rr_index_);
-    rr_index_ = (rr_index_ + 1) % ids.size();
-    const auto axis_res = findAxis(static_cast<std::uint16_t>(axis_id));
-    if (!axis_res.ok()) return;
-    const auto telemetry_res = axis_res.value()->read_telemetry();
-    if (!telemetry_res.ok()) return;
 
-    QVariantMap t;
-    const auto& telemetry = telemetry_res.value();
-    t["status"] = static_cast<int>(telemetry.status_word);
-    t["state"] = static_cast<int>(telemetry.state);
-    t["axis"] = static_cast<double>(telemetry.actual_position_deg);
-    t["target"] = static_cast<double>(telemetry.target_position_deg);
-    t["speed"] = static_cast<double>(telemetry.actual_velocity_deg_per_sec);
-    t["torque"] = static_cast<double>(telemetry.actual_torque_percent);
-    t["protection"] = static_cast<int>(telemetry.protection_code);
-    t["motion_status"] = static_cast<int>(telemetry.motion_status_code);
-    t["error_code"] = static_cast<int>(telemetry.protection_code);
-    const auto transport = axis_res.value()->info().transport;
-    t["transport"] = (transport == motion_core::AxisTransportKind::CanBus)
-        ? QStringLiteral("mks")
-        : (transport == motion_core::AxisTransportKind::Ethercat
-            ? QStringLiteral("ethercat")
-            : QStringLiteral("unknown"));
-    emit telemetryUpdated(axis_id, t);
+    QVector<int> poll_order;
+    poll_order.reserve(2);
+
+    const bool has_priority = ui_priority_axis_id_ > 0 && watched_axes_.contains(ui_priority_axis_id_);
+    if (has_priority) {
+        poll_order.push_back(ui_priority_axis_id_);
+    }
+
+    rr_index_ %= ids.size();
+    int rr_axis_id = ids.at(rr_index_);
+    rr_index_ = (rr_index_ + 1) % ids.size();
+    if (!poll_order.contains(rr_axis_id)) {
+        poll_order.push_back(rr_axis_id);
+    }
+
+    for (const int axis_id : poll_order) {
+        const auto axis_res = findAxis(static_cast<std::uint16_t>(axis_id));
+        if (!axis_res.ok()) {
+            continue;
+        }
+
+        const auto telemetry_res = axis_res.value()->read_telemetry();
+        if (!telemetry_res.ok()) {
+            continue;
+        }
+
+        QVariantMap t;
+        const auto& telemetry = telemetry_res.value();
+        t["status"] = static_cast<int>(telemetry.status_word);
+        t["state"] = static_cast<int>(telemetry.state);
+        t["axis"] = static_cast<double>(telemetry.actual_position_deg);
+        t["target"] = static_cast<double>(telemetry.target_position_deg);
+        t["speed"] = static_cast<double>(telemetry.actual_velocity_deg_per_sec);
+        t["torque"] = static_cast<double>(telemetry.actual_torque_percent);
+        t["protection"] = static_cast<int>(telemetry.protection_code);
+        t["motion_status"] = static_cast<int>(telemetry.motion_status_code);
+        t["error_code"] = static_cast<int>(telemetry.protection_code);
+        t["timestamp_ns"] = static_cast<qulonglong>(telemetry.timestamp_ns);
+        const auto transport = axis_res.value()->info().transport;
+        t["transport"] = (transport == motion_core::AxisTransportKind::CanBus)
+            ? QStringLiteral("mks")
+            : (transport == motion_core::AxisTransportKind::Ethercat
+                ? QStringLiteral("ethercat")
+                : QStringLiteral("unknown"));
+
+        if (transport == motion_core::AxisTransportKind::CanBus) {
+            const auto mks_axis = std::dynamic_pointer_cast<mks::MksAxisAdapter>(axis_res.value());
+            if (mks_axis) {
+                const auto metrics = mks_axis->cycle_metrics_snapshot();
+                t["cmd_tx_hz"] = metrics.command_tx.rate_hz;
+                t["cmd_tx_period_ms"] = metrics.command_tx.last_period_ms;
+                t["telemetry_publish_hz"] = metrics.telemetry_publish.rate_hz;
+                t["telemetry_publish_period_ms"] = metrics.telemetry_publish.last_period_ms;
+                t["position_rx_hz"] = metrics.position_rx.rate_hz;
+                t["position_rx_period_ms"] = metrics.position_rx.last_period_ms;
+                t["speed_rx_hz"] = metrics.speed_rx.rate_hz;
+                t["status_rx_hz"] = metrics.status_rx.rate_hz;
+                t["protection_rx_hz"] = metrics.protection_rx.rate_hz;
+
+                std::vector<mks::AxisPositionSample> drained_samples;
+                drained_samples.reserve(kMaxUiPositionSamplesPerTick);
+                const auto drained = mks_axis->drain_position_samples(drained_samples, kMaxUiPositionSamplesPerTick);
+                if (drained > 0U) {
+                    QVariantList samples_list;
+                    samples_list.reserve(static_cast<int>(drained_samples.size()));
+                    for (const auto& sample : drained_samples) {
+                        QVariantMap sample_map;
+                        sample_map["timestamp_ns"] = static_cast<qulonglong>(sample.timestamp_ns);
+                        sample_map["position_deg"] = sample.position_deg;
+                        samples_list.push_back(sample_map);
+                    }
+                    t["position_samples"] = samples_list;
+                }
+            }
+        }
+
+        emit telemetryUpdated(axis_id, t);
+    }
 }
 
 } // namespace mks

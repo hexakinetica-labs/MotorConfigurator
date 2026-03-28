@@ -22,7 +22,7 @@ RuntimeLoop::~RuntimeLoop() {
     (void)stop();
 }
 
-Result<void> RuntimeLoop::start(std::chrono::milliseconds period, TickHandler on_tick) {
+Result<void> RuntimeLoop::start(std::chrono::microseconds period, TickHandler on_tick) {
     if (period.count() <= 0) {
         return Result<void>::failure({ErrorCode::InvalidArgument, "period must be positive"});
     }
@@ -52,7 +52,7 @@ Result<void> RuntimeLoop::stop() {
     return Result<void>::success();
 }
 
-void RuntimeLoop::worker(std::chrono::milliseconds period, TickHandler on_tick) {
+void RuntimeLoop::worker(std::chrono::microseconds period, TickHandler on_tick) {
     configure_realtime_best_effort();
 
     auto next_tick = std::chrono::steady_clock::now() + period;
