@@ -1,0 +1,1 @@
+{"version":1,"runtime":{"dispatch_period_ms":4,"telemetry_period_ms":100},"mks_buses":[{"interface_id":"sim:default","device_path":"sim:default","baud_rate":500000}],"axes":[{"axis_id":1,"axis_name":"MKS Axis CAN 1","transport":"mks_can","bus_ref":"sim:default","transport_address":1,"config_file":"/definitely/not/found.axis_config.json","enable_on_start":false}]}
