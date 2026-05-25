@@ -1,23 +1,42 @@
 #include "init_all_drivers.h"
 
+#ifndef MOTORCONF_ENABLE_MKS_CAN
+#define MOTORCONF_ENABLE_MKS_CAN 1
+#endif
+
+#ifndef MOTORCONF_ENABLE_ETHERCAT
+#define MOTORCONF_ENABLE_ETHERCAT 1
+#endif
+
+#if MOTORCONF_ENABLE_MKS_CAN
 #include "mks_can/adapter/mks_runtime_factory.h"
 #include "mks_can/manager/mks_topology_scanner.h"
+#endif
+
+#if MOTORCONF_ENABLE_ETHERCAT
 #include "ethercat/manager/ethercat_runtime_factory.h"
 #include "ethercat/manager/ethercat_bus_manager.h"
+#endif
+
 #include "motion_core/runtime_factory_registry.h"
 #include "motion_core/config/hal_runtime_config.h"
 
 namespace drivers {
 
 void init_all_drivers() {
+#if MOTORCONF_ENABLE_MKS_CAN
     motion_core::RuntimeFactoryRegistry::register_factory(
         motion_core::AxisTransportKind::CanBus,
         [](const motion_core::HalRuntimeConfig& cfg) { return mks::build_mks_runtime(cfg); }
     );
+#endif
+#if MOTORCONF_ENABLE_ETHERCAT
     motion_core::RuntimeFactoryRegistry::register_factory(
         motion_core::AxisTransportKind::Ethercat,
         [](const motion_core::HalRuntimeConfig& cfg) { return ethercat_driver::build_ethercat_runtime(cfg); }
     );
+#endif
+#if MOTORCONF_ENABLE_MKS_CAN
     motion_core::RuntimeFactoryRegistry::register_mks_topology_scanner(
         [](const motion_core::MksScanRequest& request) -> motion_core::Result<motion_core::HalRuntimeConfig> {
             const auto discovered = mks::discover_mks_topology(
@@ -33,6 +52,8 @@ void init_all_drivers() {
             return motion_core::Result<motion_core::HalRuntimeConfig>::success(std::move(config));
         }
     );
+#endif
+#if MOTORCONF_ENABLE_ETHERCAT
     motion_core::RuntimeFactoryRegistry::register_ethercat_topology_scanner(
         [](const motion_core::EthercatScanRequest& request) -> motion_core::Result<motion_core::HalRuntimeConfig> {
             const auto discovered = ethercat_driver::EthercatBusManager::discover_ethercat_topology(
@@ -48,6 +69,7 @@ void init_all_drivers() {
             return motion_core::Result<motion_core::HalRuntimeConfig>::success(std::move(config));
         }
     );
+#endif
 }
 
 } // namespace drivers

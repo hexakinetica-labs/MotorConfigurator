@@ -8,6 +8,12 @@
 
 namespace hal_ipc {
 
+#ifndef HAL_IPC_SOCKET_HANDLE_DECLARED
+#define HAL_IPC_SOCKET_HANDLE_DECLARED
+using SocketHandle = std::intptr_t;
+constexpr SocketHandle kInvalidSocketHandle = static_cast<SocketHandle>(-1);
+#endif
+
 class HalIpcClient {
 public:
     HalIpcClient() = default;
@@ -27,7 +33,7 @@ private:
     motion_core::Result<void> send_line(const std::string& line);
     motion_core::Result<std::string> recv_line();
 
-    int socket_fd_{-1};
+    SocketHandle socket_fd_{kInvalidSocketHandle};
     std::string rx_buffer_{};
 };
 

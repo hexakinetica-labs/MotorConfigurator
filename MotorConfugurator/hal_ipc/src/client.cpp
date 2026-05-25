@@ -1,18 +1,75 @@
 #include "hal_ipc/client.h"
 
-#include <cerrno>
-#include <cstring>
+#include <algorithm>
+#include <limits>
 
-#ifndef _WIN32
+#ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#else
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <sys/socket.h>
 #include <sys/time.h>
-#include <netinet/tcp.h>
 #include <unistd.h>
 #endif
 
 namespace hal_ipc {
+
+namespace {
+
+#ifdef _WIN32
+
+[[nodiscard]] motion_core::Result<void> ensure_winsock_started() {
+    static const struct WinsockRuntime final {
+        int startup_result{0};
+
+        WinsockRuntime() {
+            WSADATA data{};
+            startup_result = ::WSAStartup(MAKEWORD(2, 2), &data);
+        }
+
+        ~WinsockRuntime() {
+            if (startup_result == 0) {
+                ::WSACleanup();
+            }
+        }
+    } runtime{};
+
+    if (runtime.startup_result != 0) {
+        return motion_core::Result<void>::failure(
+            {motion_core::ErrorCode::TransportFailure, "WSAStartup failed in HalIpcClient"});
+    }
+    return motion_core::Result<void>::success();
+}
+
+[[nodiscard]] SOCKET to_native_socket(const SocketHandle handle) {
+    return static_cast<SOCKET>(handle);
+}
+
+void close_socket(SocketHandle& handle) {
+    if (handle != kInvalidSocketHandle) {
+        (void)::closesocket(to_native_socket(handle));
+        handle = kInvalidSocketHandle;
+    }
+}
+
+#else
+
+void close_socket(SocketHandle& handle) {
+    if (handle != kInvalidSocketHandle) {
+        (void)::close(static_cast<int>(handle));
+        handle = kInvalidSocketHandle;
+    }
+}
+
+#endif
+
+} // namespace
 
 HalIpcClient::~HalIpcClient() {
     (void)disconnect();
@@ -20,18 +77,29 @@ HalIpcClient::~HalIpcClient() {
 
 motion_core::Result<void> HalIpcClient::connect_to(const std::string& host, const std::uint16_t port, const int timeout_ms) {
 #ifdef _WIN32
-    (void)host;
-    (void)port;
-    (void)timeout_ms;
-    return motion_core::Result<void>::failure({motion_core::ErrorCode::Unsupported, "HalIpcClient is not implemented for Windows"});
-#else
-    if (socket_fd_ >= 0) {
+    const auto winsock = ensure_winsock_started();
+    if (!winsock.ok()) {
+        return winsock;
+    }
+#endif
+
+    if (socket_fd_ != kInvalidSocketHandle) {
         return motion_core::Result<void>::success();
     }
 
+#ifdef _WIN32
+    const SOCKET fd = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (fd == INVALID_SOCKET) {
+        return motion_core::Result<void>::failure({motion_core::ErrorCode::TransportFailure, "socket() failed in HalIpcClient"});
+    }
+
+    const DWORD timeout = static_cast<DWORD>(timeout_ms > 0 ? timeout_ms : 1);
+    (void)::setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<const char*>(&timeout), sizeof(timeout));
+    (void)::setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, reinterpret_cast<const char*>(&timeout), sizeof(timeout));
+#else
     const int fd = ::socket(AF_INET, SOCK_STREAM, 0);
     if (fd < 0) {
-        return motion_core::Result<void>::failure({motion_core::ErrorCode::TransportFailure, "socket() failed"});
+        return motion_core::Result<void>::failure({motion_core::ErrorCode::TransportFailure, "socket() failed in HalIpcClient"});
     }
 
     timeval tv{};
@@ -39,43 +107,45 @@ motion_core::Result<void> HalIpcClient::connect_to(const std::string& host, cons
     tv.tv_usec = (timeout_ms % 1000) * 1000;
     (void)::setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
     (void)::setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
+#endif
 
     sockaddr_in addr{};
     addr.sin_family = AF_INET;
     addr.sin_port = htons(port);
     if (::inet_pton(AF_INET, host.c_str(), &addr.sin_addr) != 1) {
-        ::close(fd);
+#ifdef _WIN32
+        (void)::closesocket(fd);
+#else
+        (void)::close(fd);
+#endif
         return motion_core::Result<void>::failure({motion_core::ErrorCode::InvalidArgument, "invalid host IPv4 address"});
     }
 
     if (::connect(fd, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) != 0) {
-        ::close(fd);
-        return motion_core::Result<void>::failure({motion_core::ErrorCode::NotConnected, "connect() failed"});
+#ifdef _WIN32
+        (void)::closesocket(fd);
+#else
+        (void)::close(fd);
+#endif
+        return motion_core::Result<void>::failure({motion_core::ErrorCode::NotConnected, "connect() failed in HalIpcClient"});
     }
 
     const int one = 1;
-    (void)::setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one));
+    (void)::setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<const char*>(&one), sizeof(one));
 
-    socket_fd_ = fd;
+    socket_fd_ = static_cast<SocketHandle>(fd);
     rx_buffer_.clear();
     return motion_core::Result<void>::success();
-#endif
 }
 
 motion_core::Result<void> HalIpcClient::disconnect() {
-#ifdef _WIN32
+    close_socket(socket_fd_);
+    rx_buffer_.clear();
     return motion_core::Result<void>::success();
-#else
-    if (socket_fd_ >= 0) {
-        ::close(socket_fd_);
-        socket_fd_ = -1;
-    }
-    return motion_core::Result<void>::success();
-#endif
 }
 
 bool HalIpcClient::is_connected() const noexcept {
-    return socket_fd_ >= 0;
+    return socket_fd_ != kInvalidSocketHandle;
 }
 
 motion_core::Result<HalStateFrameDto> HalIpcClient::exchange_control_frame(const HalControlFrameDto& frame) {
@@ -112,57 +182,57 @@ motion_core::Result<HalStateFrameDto> HalIpcClient::request_state_snapshot() {
 }
 
 motion_core::Result<void> HalIpcClient::send_line(const std::string& line) {
-#ifdef _WIN32
-    (void)line;
-    return motion_core::Result<void>::failure({motion_core::ErrorCode::Unsupported, "HalIpcClient is not implemented for Windows"});
-#else
-    if (socket_fd_ < 0) {
+    if (socket_fd_ == kInvalidSocketHandle) {
         return motion_core::Result<void>::failure({motion_core::ErrorCode::NotConnected, "client is not connected"});
     }
 
     const std::string payload = line + "\n";
-    const auto* ptr = payload.data();
+    const char* ptr = payload.data();
     std::size_t left = payload.size();
     while (left > 0U) {
-        const auto written = ::send(socket_fd_, ptr, left, 0);
+#ifdef _WIN32
+        const int chunk = static_cast<int>(std::min<std::size_t>(left, static_cast<std::size_t>(std::numeric_limits<int>::max())));
+        const int written = ::send(to_native_socket(socket_fd_), ptr, chunk, 0);
+#else
+        const auto written = ::send(static_cast<int>(socket_fd_), ptr, left, 0);
+#endif
         if (written <= 0) {
-            return motion_core::Result<void>::failure({motion_core::ErrorCode::TransportFailure, "send() failed"});
+            return motion_core::Result<void>::failure({motion_core::ErrorCode::TransportFailure, "send() failed in HalIpcClient"});
         }
         ptr += written;
         left -= static_cast<std::size_t>(written);
     }
     return motion_core::Result<void>::success();
-#endif
 }
 
 motion_core::Result<std::string> HalIpcClient::recv_line() {
-#ifdef _WIN32
-    return motion_core::Result<std::string>::failure({motion_core::ErrorCode::Unsupported, "HalIpcClient is not implemented for Windows"});
-#else
-    if (socket_fd_ < 0) {
+    if (socket_fd_ == kInvalidSocketHandle) {
         return motion_core::Result<std::string>::failure({motion_core::ErrorCode::NotConnected, "client is not connected"});
     }
 
     while (true) {
-        if (rx_buffer_.size() > 65536) {
+        if (rx_buffer_.size() > 65536U) {
             rx_buffer_.clear();
             return motion_core::Result<std::string>::failure({motion_core::ErrorCode::TransportFailure, "rx buffer overflow"});
         }
         const std::size_t newline_pos = rx_buffer_.find('\n');
         if (newline_pos != std::string::npos) {
             std::string line = rx_buffer_.substr(0, newline_pos);
-            rx_buffer_.erase(0, newline_pos + 1);
+            rx_buffer_.erase(0, newline_pos + 1U);
             return motion_core::Result<std::string>::success(std::move(line));
         }
 
         char tmp[4096];
-        const auto received = ::recv(socket_fd_, tmp, sizeof(tmp), 0);
-        if (received <= 0) {
-            return motion_core::Result<std::string>::failure({motion_core::ErrorCode::TransportFailure, "recv() failed or connection closed"});
-        }
-        rx_buffer_.append(tmp, received);
-    }
+#ifdef _WIN32
+        const int received = ::recv(to_native_socket(socket_fd_), tmp, static_cast<int>(sizeof(tmp)), 0);
+#else
+        const auto received = ::recv(static_cast<int>(socket_fd_), tmp, sizeof(tmp), 0);
 #endif
+        if (received <= 0) {
+            return motion_core::Result<std::string>::failure({motion_core::ErrorCode::TransportFailure, "recv() failed or connection closed in HalIpcClient"});
+        }
+        rx_buffer_.append(tmp, static_cast<std::size_t>(received));
+    }
 }
 
 } // namespace hal_ipc

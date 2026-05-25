@@ -121,6 +121,8 @@ private:
     QSet<int> mks_axes_;
     QSet<int> ethercat_axes_;
     QSet<int> runtime_started_axes_;
+    QSet<int> last_scanned_mks_can_ids_;
+    bool has_mks_scan_snapshot_{false};
     QString   opened_mks_device_path_;
     int       opened_mks_baud_rate_{0};
     bool      mks_device_opened_{false};

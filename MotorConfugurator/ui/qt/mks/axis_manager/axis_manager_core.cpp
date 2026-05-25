@@ -1,8 +1,9 @@
 #include "mks/axis_manager/axis_manager.h"
 
-#include "ethercat/adapter/ethercat_axis_adapter.h"
 #include "ethercat/p100e_ethercat_dictionary.h"
 #include "mks_can/adapter/mks_axis_adapter.h"
+#include "mks_can/internal/port/gs_usb_can_port.h"
+#include "mks_can/internal/port/sim_can_port.h"
 #include <QCoreApplication>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -145,6 +146,60 @@ constexpr const char* kEthercatTransportBusRef = "ethercat";
         used_ids.insert(can_id);
     }
 
+    return true;
+}
+
+[[nodiscard]] static QString make_mks_open_probe_failure_message(const QString& device_path,
+                                                                 const int baud_rate) {
+    QString message = QStringLiteral("Failed to access MKS device %1 @ %2. "
+                                     "The device may be busy, disconnected, or not accessible.")
+                          .arg(device_path)
+                          .arg(baud_rate);
+#ifdef _WIN32
+    message += QStringLiteral(" On Windows, also verify that the GS-USB adapter is bound to a "
+                              "WinUSB/libusb-compatible driver.");
+#endif
+    return message;
+}
+
+[[nodiscard]] static bool probe_mks_device_access(const QString& device_path,
+                                                  const int baud_rate,
+                                                  QString* error_out) {
+    if (device_path.isEmpty() || baud_rate <= 0) {
+        if (error_out) {
+            *error_out = QStringLiteral("invalid device path or baud rate");
+        }
+        return false;
+    }
+
+    std::unique_ptr<mks::ICanPort> can_port{};
+    const std::string device_path_std = device_path.toStdString();
+    if (device_path_std.rfind("sim", 0) == 0 || device_path_std.rfind("SIM", 0) == 0) {
+        can_port = std::make_unique<mks::SimCanPort>();
+    } else {
+        can_port = std::make_unique<mks::GsUsbCanPort>();
+    }
+
+    if (auto* gs_usb_port = dynamic_cast<mks::GsUsbCanPort*>(can_port.get())) {
+        if (!gs_usb_port->probeAccess(device_path_std.c_str())) {
+            if (error_out) {
+                const QString low_level = QString::fromStdString(gs_usb_port->lastError());
+                *error_out = make_mks_open_probe_failure_message(device_path, baud_rate)
+                             + (low_level.isEmpty() ? QString() : QStringLiteral(" Details: %1").arg(low_level));
+            }
+            return false;
+        }
+        return true;
+    }
+
+    if (!can_port->open(device_path_std.c_str(), static_cast<unsigned int>(baud_rate))) {
+        if (error_out) {
+            *error_out = make_mks_open_probe_failure_message(device_path, baud_rate);
+        }
+        return false;
+    }
+
+    can_port->close();
     return true;
 }
 
@@ -359,9 +414,50 @@ void AxisManager::rebuildRuntimeFromCurrentConfig() {
             bus.device_path = opened_mks_device_path_.toStdString();
             bus.baud_rate = static_cast<std::uint32_t>(opened_mks_baud_rate_);
         }
-        for (auto& axis : effective_config.axes) {
-            if (axis.transport == motion_core::AxisTransportKind::CanBus) {
-                axis.bus_ref = kMksTransportBusRef;
+        if (!has_mks_scan_snapshot_) {
+            effective_config.mks_buses.clear();
+            effective_config.axes.erase(
+                std::remove_if(effective_config.axes.begin(), effective_config.axes.end(),
+                               [](const motion_core::HalAxisRuntimeEntry& axis) {
+                                   return axis.transport == motion_core::AxisTransportKind::CanBus;
+                               }),
+                effective_config.axes.end());
+
+            if (!current_hal_config_.mks_buses.empty() || std::any_of(current_hal_config_.axes.begin(),
+                                                                       current_hal_config_.axes.end(),
+                                                                       [](const motion_core::HalAxisRuntimeEntry& axis) {
+                                                                           return axis.transport == motion_core::AxisTransportKind::CanBus;
+                                                                       })) {
+                emit logMessage(QStringLiteral("mks"),
+                                QStringLiteral("MKS config is loaded, but no live scan snapshot exists. Scan the bus before activating MKS axes from config."));
+            }
+        } else {
+            std::size_t skipped_mks_axes = 0U;
+            effective_config.axes.erase(
+                std::remove_if(effective_config.axes.begin(), effective_config.axes.end(),
+                               [this, &skipped_mks_axes](const motion_core::HalAxisRuntimeEntry& axis) {
+                                   if (axis.transport != motion_core::AxisTransportKind::CanBus) {
+                                       return false;
+                                   }
+
+                                   const bool live = last_scanned_mks_can_ids_.contains(static_cast<int>(axis.transport_address));
+                                   if (!live) {
+                                       ++skipped_mks_axes;
+                                   }
+                                   return !live;
+                               }),
+                effective_config.axes.end());
+
+            for (auto& axis : effective_config.axes) {
+                if (axis.transport == motion_core::AxisTransportKind::CanBus) {
+                    axis.bus_ref = kMksTransportBusRef;
+                }
+            }
+
+            if (skipped_mks_axes > 0U) {
+                emit logMessage(QStringLiteral("mks"),
+                                QStringLiteral("MKS runtime filtered by live scan: skipped %1 configured axis(es) not present in the latest bus scan.")
+                                    .arg(static_cast<qulonglong>(skipped_mks_axes)));
             }
         }
     } else {
@@ -579,6 +675,14 @@ void AxisManager::openDevice(const QString& device_path, int baud_rate) {
         emit connectionChanged(false);
         return;
     }
+
+    QString probe_error;
+    if (!probe_mks_device_access(device_path, baud_rate, &probe_error)) {
+        emit logMessage(QStringLiteral("mks"), probe_error);
+        emit connectionChanged(false);
+        return;
+    }
+
     opened_mks_device_path_ = device_path;
     opened_mks_baud_rate_   = baud_rate;
     mks_device_opened_      = true;
@@ -654,6 +758,8 @@ void AxisManager::closeDevice() {
     opened_mks_device_path_.clear();
     opened_mks_baud_rate_ = 0;
     mks_device_opened_ = false;
+    last_scanned_mks_can_ids_.clear();
+    has_mks_scan_snapshot_ = false;
     opened_ethercat_interface_.clear();
     ethercat_device_opened_ = false;
     current_hal_config_ = {};
@@ -727,10 +833,23 @@ void AxisManager::scanMotors(int max_id) {
 
         QMetaObject::invokeMethod(this, [this, discovered]() mutable {
             if (!discovered.ok()) {
-                emit logMessage(QStringLiteral("mks"), QString("Scan failed via HalRuntime: %1").arg(QString::fromStdString(discovered.error().message)));
+                QString message = QString("Scan failed via HalRuntime: %1")
+                                      .arg(QString::fromStdString(discovered.error().message));
+#ifdef _WIN32
+                message += QStringLiteral(" If the device was just selected/opened, verify that the adapter "
+                                          "is not claimed by another process and that WinUSB/libusb driver "
+                                          "binding is correct.");
+#endif
+                emit logMessage(QStringLiteral("mks"), message);
                 return;
             }
             motion_core::HalRuntimeConfig cfg = discovered.value();
+            last_scanned_mks_can_ids_.clear();
+            for (const auto& axis : cfg.axes) {
+                last_scanned_mks_can_ids_.insert(static_cast<int>(axis.transport_address));
+            }
+            has_mks_scan_snapshot_ = true;
+
             QString assign_error;
             if (!assign_mks_axis_ids_from_can_ids(current_hal_config_.axes, cfg.axes, &assign_error)) {
                 emit logMessage(QStringLiteral("mks"),

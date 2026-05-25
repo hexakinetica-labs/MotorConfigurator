@@ -18,6 +18,9 @@ public:
     bool write(const CanFrame& frame) override;
     bool read(CanFrame& frame, unsigned int timeout_ms) override;
 
+    [[nodiscard]] const std::string& lastError() const;
+    [[nodiscard]] bool probeAccess(const char* device_path);
+
     static std::vector<GsUsbDeviceInfo> enumerateDevices();
 
 private:

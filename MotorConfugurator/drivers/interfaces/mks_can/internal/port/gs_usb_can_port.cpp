@@ -28,15 +28,37 @@ struct GsUsbFrame {
     uint8_t reserved;
     uint8_t data[8];
 };
+
+struct UsbInterfaceEndpoints {
+    uint8_t interface_number{0};
+    uint8_t bulk_in_endpoint{0};
+    uint8_t bulk_out_endpoint{0};
+};
+
+[[nodiscard]] std::string make_libusb_error_message(const char* step, const int code) {
+    std::ostringstream oss;
+    oss << step << " failed: " << libusb_error_name(code) << " (" << code << ")";
+    return oss.str();
+}
+
 } // namespace
 
 struct GsUsbCanPort::Impl {
     libusb_context* ctx{nullptr};
     libusb_device_handle* dev{nullptr};
     uint8_t intf_num{0};
+    uint8_t bulk_in_ep{0x81};
+    uint8_t bulk_out_ep{0x02};
     uint8_t rx_buf[2048]{};
+    std::string last_error{};
 
-    Impl() { libusb_init(&ctx); }
+    Impl() {
+        const int rc = libusb_init(&ctx);
+        if (rc != 0) {
+            last_error = make_libusb_error_message("libusb_init", rc);
+            ctx = nullptr;
+        }
+    }
     ~Impl() {
         if (dev) {
             libusb_release_interface(dev, intf_num);
@@ -56,6 +78,63 @@ struct GsUsbCanPort::Impl {
         p[1] = static_cast<uint8_t>((v >> 8) & 0xFF);
         p[2] = static_cast<uint8_t>((v >> 16) & 0xFF);
         p[3] = static_cast<uint8_t>((v >> 24) & 0xFF);
+    }
+
+    void set_error(std::string message) {
+        last_error = std::move(message);
+    }
+
+    [[nodiscard]] bool has_context() const noexcept {
+        return ctx != nullptr;
+    }
+
+    [[nodiscard]] static bool discover_endpoints(libusb_device* device, UsbInterfaceEndpoints* endpoints_out) {
+        libusb_config_descriptor* config = nullptr;
+        if (libusb_get_active_config_descriptor(device, &config) != 0 || config == nullptr) {
+            if (libusb_get_config_descriptor(device, 0, &config) != 0 || config == nullptr) {
+                return false;
+            }
+        }
+
+        bool found = false;
+        for (uint8_t interface_index = 0; interface_index < config->bNumInterfaces; ++interface_index) {
+            const auto& interface_group = config->interface[interface_index];
+            for (int alt_index = 0; alt_index < interface_group.num_altsetting; ++alt_index) {
+                const auto& alt = interface_group.altsetting[alt_index];
+                UsbInterfaceEndpoints candidate{};
+                candidate.interface_number = alt.bInterfaceNumber;
+
+                for (uint8_t endpoint_index = 0; endpoint_index < alt.bNumEndpoints; ++endpoint_index) {
+                    const auto& endpoint = alt.endpoint[endpoint_index];
+                    const uint8_t transfer_type = endpoint.bmAttributes & LIBUSB_TRANSFER_TYPE_MASK;
+                    if (transfer_type != LIBUSB_TRANSFER_TYPE_BULK) {
+                        continue;
+                    }
+
+                    const uint8_t address = endpoint.bEndpointAddress;
+                    if ((address & LIBUSB_ENDPOINT_DIR_MASK) == LIBUSB_ENDPOINT_IN) {
+                        candidate.bulk_in_endpoint = address;
+                    } else {
+                        candidate.bulk_out_endpoint = address;
+                    }
+                }
+
+                if (candidate.bulk_in_endpoint != 0U && candidate.bulk_out_endpoint != 0U) {
+                    if (endpoints_out != nullptr) {
+                        *endpoints_out = candidate;
+                    }
+                    found = true;
+                    break;
+                }
+            }
+
+            if (found) {
+                break;
+            }
+        }
+
+        libusb_free_config_descriptor(config);
+        return found;
     }
 
     bool set_mode(uint32_t mode, uint32_t flags) {
@@ -79,6 +158,8 @@ struct GsUsbCanPort::Impl {
 GsUsbCanPort::GsUsbCanPort() : impl_(std::make_unique<Impl>()) {}
 GsUsbCanPort::~GsUsbCanPort() = default;
 
+const std::string& GsUsbCanPort::lastError() const { return impl_->last_error; }
+
 bool GsUsbCanPort::isOpen() const { return impl_->dev != nullptr; }
 
 void GsUsbCanPort::close() {
@@ -90,14 +171,87 @@ void GsUsbCanPort::close() {
     }
 }
 
-bool GsUsbCanPort::open(const char* device_path, unsigned int baud_rate) {
+bool GsUsbCanPort::probeAccess(const char* device_path) {
     if (isOpen()) {
         close();
+    }
+
+    impl_->last_error.clear();
+    if (!impl_->has_context()) {
+        if (impl_->last_error.empty()) {
+            impl_->set_error("libusb context is not available");
+        }
+        return false;
     }
 
     libusb_device** devs = nullptr;
     const ssize_t cnt = libusb_get_device_list(impl_->ctx, &devs);
     if (cnt < 0) {
+        impl_->set_error(make_libusb_error_message("libusb_get_device_list", static_cast<int>(cnt)));
+        return false;
+    }
+
+    const std::string target_path = device_path ? device_path : "";
+    libusb_device* target = nullptr;
+    for (ssize_t i = 0; i < cnt; ++i) {
+        libusb_device_descriptor desc{};
+        if (libusb_get_device_descriptor(devs[i], &desc) != 0) {
+            continue;
+        }
+        if (desc.idVendor != 0x1d50 || desc.idProduct != 0x606f) {
+            continue;
+        }
+
+        if (target_path.empty()) {
+            target = devs[i];
+            break;
+        }
+
+        const uint8_t bus = libusb_get_bus_number(devs[i]);
+        const uint8_t addr = libusb_get_device_address(devs[i]);
+        std::stringstream ss;
+        ss << "usb:" << static_cast<int>(bus) << ":" << static_cast<int>(addr);
+        if (ss.str() == target_path) {
+            target = devs[i];
+            break;
+        }
+    }
+
+    if (!target) {
+        libusb_free_device_list(devs, 1);
+        impl_->set_error("GS-USB target device was not found");
+        return false;
+    }
+
+    libusb_device_handle* handle = nullptr;
+    const int open_rc = libusb_open(target, &handle);
+    libusb_free_device_list(devs, 1);
+    if (open_rc != 0) {
+        impl_->set_error(make_libusb_error_message("libusb_open", open_rc));
+        return false;
+    }
+
+    libusb_close(handle);
+    return true;
+}
+
+bool GsUsbCanPort::open(const char* device_path, unsigned int baud_rate) {
+    if (isOpen()) {
+        close();
+    }
+
+    impl_->last_error.clear();
+    if (!impl_->has_context()) {
+        if (impl_->last_error.empty()) {
+            impl_->set_error("libusb context is not available");
+        }
+        return false;
+    }
+
+    libusb_device** devs = nullptr;
+    const ssize_t cnt = libusb_get_device_list(impl_->ctx, &devs);
+    if (cnt < 0) {
+        impl_->set_error(make_libusb_error_message("libusb_get_device_list", static_cast<int>(cnt)));
         return false;
     }
 
@@ -128,44 +282,74 @@ bool GsUsbCanPort::open(const char* device_path, unsigned int baud_rate) {
 
     if (!target) {
         libusb_free_device_list(devs, 1);
+        impl_->set_error("GS-USB target device was not found");
         return false;
     }
 
-    if (libusb_open(target, &impl_->dev) != 0) {
+    UsbInterfaceEndpoints endpoints{};
+    if (!Impl::discover_endpoints(target, &endpoints)) {
         libusb_free_device_list(devs, 1);
+        impl_->set_error("failed to discover GS-USB bulk endpoints from USB descriptors");
+        return false;
+    }
+
+    const int open_rc = libusb_open(target, &impl_->dev);
+    if (open_rc != 0) {
+        libusb_free_device_list(devs, 1);
+        impl_->set_error(make_libusb_error_message("libusb_open", open_rc));
         return false;
     }
     libusb_free_device_list(devs, 1);
 
-    if (libusb_kernel_driver_active(impl_->dev, 0) == 1) {
-        libusb_detach_kernel_driver(impl_->dev, 0);
+    impl_->intf_num = endpoints.interface_number;
+    impl_->bulk_in_ep = endpoints.bulk_in_endpoint;
+    impl_->bulk_out_ep = endpoints.bulk_out_endpoint;
+
+#ifndef _WIN32
+    if (libusb_kernel_driver_active(impl_->dev, impl_->intf_num) == 1) {
+        const int detach_rc = libusb_detach_kernel_driver(impl_->dev, impl_->intf_num);
+        if (detach_rc != 0) {
+            impl_->set_error(make_libusb_error_message("libusb_detach_kernel_driver", detach_rc));
+            close();
+            return false;
+        }
     }
-    if (libusb_claim_interface(impl_->dev, 0) < 0) {
+#endif
+    const int claim_rc = libusb_claim_interface(impl_->dev, impl_->intf_num);
+    if (claim_rc < 0) {
+        impl_->set_error(make_libusb_error_message("libusb_claim_interface", claim_rc));
         close();
         return false;
     }
 
     uint32_t host_format = 0x0000BEEF;
-    libusb_control_transfer(impl_->dev,
-                            static_cast<uint8_t>(LIBUSB_ENDPOINT_OUT) | static_cast<uint8_t>(LIBUSB_REQUEST_TYPE_VENDOR) |
-                                static_cast<uint8_t>(LIBUSB_RECIPIENT_INTERFACE),
-                            GS_USB_BREQ_HOST_FORMAT,
-                            1,
-                            impl_->intf_num,
-                            reinterpret_cast<uint8_t*>(&host_format),
-                            sizeof(host_format),
-                            1000);
+    const int host_format_rc = libusb_control_transfer(impl_->dev,
+                                                       static_cast<uint8_t>(LIBUSB_ENDPOINT_OUT) | static_cast<uint8_t>(LIBUSB_REQUEST_TYPE_VENDOR) |
+                                                           static_cast<uint8_t>(LIBUSB_RECIPIENT_INTERFACE),
+                                                       GS_USB_BREQ_HOST_FORMAT,
+                                                       1,
+                                                       impl_->intf_num,
+                                                       reinterpret_cast<uint8_t*>(&host_format),
+                                                       sizeof(host_format),
+                                                       1000);
+    if (host_format_rc < 0) {
+        impl_->set_error(make_libusb_error_message("GS_USB_BREQ_HOST_FORMAT", host_format_rc));
+        close();
+        return false;
+    }
 
     uint8_t bt_const[40]{};
-    if (libusb_control_transfer(impl_->dev,
-                                static_cast<uint8_t>(LIBUSB_ENDPOINT_IN) | static_cast<uint8_t>(LIBUSB_REQUEST_TYPE_VENDOR) |
-                                    static_cast<uint8_t>(LIBUSB_RECIPIENT_INTERFACE),
-                                GS_USB_BREQ_BT_CONST,
-                                0,
-                                impl_->intf_num,
-                                bt_const,
-                                sizeof(bt_const),
-                                1000) < 0) {
+    const int bt_const_rc = libusb_control_transfer(impl_->dev,
+                                                    static_cast<uint8_t>(LIBUSB_ENDPOINT_IN) | static_cast<uint8_t>(LIBUSB_REQUEST_TYPE_VENDOR) |
+                                                        static_cast<uint8_t>(LIBUSB_RECIPIENT_INTERFACE),
+                                                    GS_USB_BREQ_BT_CONST,
+                                                    0,
+                                                    impl_->intf_num,
+                                                    bt_const,
+                                                    sizeof(bt_const),
+                                                    1000);
+    if (bt_const_rc < 0) {
+        impl_->set_error(make_libusb_error_message("GS_USB_BREQ_BT_CONST", bt_const_rc));
         close();
         return false;
     }
@@ -208,6 +392,7 @@ bool GsUsbCanPort::open(const char* device_path, unsigned int baud_rate) {
             scale = 8;
             break;
         default:
+            impl_->set_error("unsupported CAN baud rate for GS-USB open");
             close();
             return false;
     }
@@ -220,20 +405,23 @@ bool GsUsbCanPort::open(const char* device_path, unsigned int baud_rate) {
     Impl::write_u32(bit_timing.data() + 12, sjw);
     Impl::write_u32(bit_timing.data() + 16, brp);
 
-    if (libusb_control_transfer(impl_->dev,
-                                static_cast<uint8_t>(LIBUSB_ENDPOINT_OUT) | static_cast<uint8_t>(LIBUSB_REQUEST_TYPE_VENDOR) |
-                                    static_cast<uint8_t>(LIBUSB_RECIPIENT_INTERFACE),
-                                GS_USB_BREQ_BITTIMING,
-                                0,
-                                impl_->intf_num,
-                                bit_timing.data(),
-                                static_cast<uint16_t>(bit_timing.size()),
-                                1000) < 0) {
+    const int bit_timing_rc = libusb_control_transfer(impl_->dev,
+                                                      static_cast<uint8_t>(LIBUSB_ENDPOINT_OUT) | static_cast<uint8_t>(LIBUSB_REQUEST_TYPE_VENDOR) |
+                                                          static_cast<uint8_t>(LIBUSB_RECIPIENT_INTERFACE),
+                                                      GS_USB_BREQ_BITTIMING,
+                                                      0,
+                                                      impl_->intf_num,
+                                                      bit_timing.data(),
+                                                      static_cast<uint16_t>(bit_timing.size()),
+                                                      1000);
+    if (bit_timing_rc < 0) {
+        impl_->set_error(make_libusb_error_message("GS_USB_BREQ_BITTIMING", bit_timing_rc));
         close();
         return false;
     }
 
     if (!impl_->set_mode(GS_USB_MODE_START, 0)) {
+        impl_->set_error("GS_USB_BREQ_MODE start failed");
         close();
         return false;
     }
@@ -255,11 +443,14 @@ bool GsUsbCanPort::write(const CanFrame& frame) {
 
     int transferred = 0;
     const int r = libusb_bulk_transfer(impl_->dev,
-                                       static_cast<unsigned char>(0x02 | static_cast<uint8_t>(LIBUSB_ENDPOINT_OUT)),
+                                       impl_->bulk_out_ep,
                                        reinterpret_cast<uint8_t*>(&out),
                                        sizeof(out),
                                        &transferred,
                                        100);
+    if (r != 0) {
+        impl_->set_error(make_libusb_error_message("libusb_bulk_transfer write", r));
+    }
     return (r == 0 && transferred == sizeof(out));
 }
 
@@ -283,12 +474,19 @@ bool GsUsbCanPort::read(CanFrame& frame, unsigned int timeout_ms) {
 
         int transferred = 0;
         const int r = libusb_bulk_transfer(impl_->dev,
-                                           static_cast<unsigned char>(0x81 | static_cast<uint8_t>(LIBUSB_ENDPOINT_IN)),
+                                           impl_->bulk_in_ep,
                                            impl_->rx_buf,
                                            sizeof(GsUsbFrame),
                                            &transferred,
                                            step_timeout);
-        if (r != 0 || transferred < 20) { // candleLight FW can return 20 or 24 bytes
+        if (r != 0) {
+            if (r != LIBUSB_ERROR_TIMEOUT) {
+                impl_->set_error(make_libusb_error_message("libusb_bulk_transfer read", r));
+            }
+            return false;
+        }
+        if (transferred < 20) { // candleLight FW can return 20 or 24 bytes
+            impl_->set_error("GS-USB read returned short frame");
             return false;
         }
 

@@ -13,6 +13,12 @@
 
 namespace hal_ipc {
 
+#ifndef HAL_IPC_SOCKET_HANDLE_DECLARED
+#define HAL_IPC_SOCKET_HANDLE_DECLARED
+using SocketHandle = std::intptr_t;
+constexpr SocketHandle kInvalidSocketHandle = static_cast<SocketHandle>(-1);
+#endif
+
 class HalIpcServer {
 public:
     using ControlHandler = std::function<HalStateFrameDto(const HalControlFrameDto&)>;
@@ -36,13 +42,13 @@ public:
 
 private:
     void worker_loop();
-    void client_worker(int client_fd);
+    void client_worker(SocketHandle client_fd);
 
-    motion_core::Result<int> accept_client_with_timeout(int timeout_ms) const;
-    motion_core::Result<std::string> recv_line(int client_fd, std::string& rx_buffer) const;
-    motion_core::Result<void> send_line(int client_fd, const std::string& line) const;
+    motion_core::Result<SocketHandle> accept_client_with_timeout(int timeout_ms) const;
+    motion_core::Result<std::string> recv_line(SocketHandle client_fd, std::string& rx_buffer) const;
+    motion_core::Result<void> send_line(SocketHandle client_fd, const std::string& line) const;
 
-    int listen_fd_{-1};
+    SocketHandle listen_fd_{kInvalidSocketHandle};
     std::atomic<bool> running_{false};
     std::thread worker_{};
     ControlHandler handler_{};

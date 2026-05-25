@@ -229,11 +229,14 @@ motion_core::Result<motion_core::ParameterSet> MksAxisAdapter::read_parameters()
 }
 
 motion_core::Result<void> MksAxisAdapter::apply_parameter_patch(const motion_core::ParameterPatch& patch) {
-    const auto result = configurator_->apply_parameter_patch(patch);
-    if (!result.ok()) {
-        return result;
+    const auto apply_result = configurator_->apply_parameter_patch(patch);
+    const auto sync_result = sync_motion_runtime_from_configurator();
+
+    if (!apply_result.ok()) {
+        return apply_result;
     }
-    return sync_motion_runtime_from_configurator();
+
+    return sync_result;
 }
 
 motion_core::Result<motion_core::PersistentWriteReport> MksAxisAdapter::set_persistent(

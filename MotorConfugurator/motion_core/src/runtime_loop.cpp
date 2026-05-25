@@ -1,17 +1,31 @@
 #include "motion_core/runtime_loop.h"
 
+#ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#else
 #include <pthread.h>
 #include <sched.h>
 #include <sys/mman.h>
+#endif
 
 namespace {
 
 void configure_realtime_best_effort() {
+#ifdef _WIN32
+    // Windows is not treated as a hard real-time platform here. This best-effort
+    // priority increase is intentionally conservative to avoid starving UI and
+    // system threads on operator workstations.
+    (void)::SetThreadPriority(::GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
+#else
     (void)mlockall(MCL_CURRENT | MCL_FUTURE);
 
     sched_param params{};
     params.sched_priority = 80;
     (void)pthread_setschedparam(pthread_self(), SCHED_FIFO, &params);
+#endif
 }
 
 } // namespace
