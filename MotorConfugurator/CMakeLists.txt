@@ -74,20 +74,6 @@ target_include_directories(hal_ipc
 target_link_libraries(hal_ipc PRIVATE motion_core)
 target_compile_features(hal_ipc PUBLIC cxx_std_20)
 
-add_library(hal_host_service STATIC
-    hal_host_service/src/hal_host_service.cpp
-)
-
-target_include_directories(hal_host_service
-    PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}/hal_host_service/include
-    PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}
-        ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty
-)
-
-target_link_libraries(hal_host_service PRIVATE hal_ipc motion_core)
-target_compile_features(hal_host_service PUBLIC cxx_std_20)
 
 set(MOTORCONF_MKS_CAN_SOURCES
     apps/cli/main.cpp
@@ -101,10 +87,7 @@ set(MOTORCONF_MKS_CAN_SOURCES
     drivers/interfaces/mks_can/manager/mks_topology_scanner.cpp
     drivers/interfaces/mks_can/dictionary/mks_dictionary.h
     drivers/interfaces/mks_can/dictionary/mks_dictionary.cpp
-    drivers/interfaces/mks_can/motion/mks_motion_mode.h
-    drivers/interfaces/mks_can/motion/mks_motion_mode_base.cpp
-    drivers/interfaces/mks_can/motion/mks_absolute_position_motion.cpp
-    drivers/interfaces/mks_can/motion/mks_velocity_motion.cpp
+
     drivers/interfaces/mks_can/axis/mks_axis_worker.h
     drivers/interfaces/mks_can/axis/mks_axis_worker.cpp
     drivers/interfaces/mks_can/axis/mks_axis_state_cache.h
@@ -157,8 +140,6 @@ add_executable(motor_tester_gui
     ui/qt/mks/ScopeWidget.h
     ui/qt/mks/axis_manager/axis_manager.h
     ui/qt/mks/axis_workspace/axis_workspace.h
-    ui/qt/mks/axis_workspace/mks_axis_workspace.h
-    ui/qt/mks/axis_workspace/ethercat_axis_workspace.h
     ui/qt/mks/axis_workspace/axis_workspace_config_panel.h
     ui/qt/mks/axis_workspace/axis_workspace_control_panel.h
     ui/qt/mks/mks_all_axes_control_workspace.h
@@ -175,8 +156,6 @@ add_executable(motor_tester_gui
     ui/qt/mks/axis_manager/axis_manager_hal_service.cpp
     ui/qt/mks/axis_manager/axis_manager_homing_sequence.cpp
     ui/qt/mks/axis_workspace/axis_workspace.cpp
-    ui/qt/mks/axis_workspace/mks_axis_workspace.cpp
-    ui/qt/mks/axis_workspace/ethercat_axis_workspace.cpp
     ui/qt/mks/axis_workspace/axis_workspace_config_panel.cpp
     ui/qt/mks/axis_workspace/axis_workspace_control_panel.cpp
     ui/qt/mks/mks_all_axes_control_workspace.cpp
@@ -192,10 +171,7 @@ add_executable(motor_tester_gui
     drivers/interfaces/mks_can/manager/mks_topology_scanner.h
     drivers/interfaces/mks_can/manager/mks_topology_scanner.cpp
     drivers/interfaces/mks_can/dictionary/mks_dictionary.cpp
-    drivers/interfaces/mks_can/motion/mks_motion_mode.h
-    drivers/interfaces/mks_can/motion/mks_motion_mode_base.cpp
-    drivers/interfaces/mks_can/motion/mks_absolute_position_motion.cpp
-    drivers/interfaces/mks_can/motion/mks_velocity_motion.cpp
+
     drivers/interfaces/mks_can/axis/mks_axis_worker.h
     drivers/interfaces/mks_can/axis/mks_axis_worker.cpp
     drivers/interfaces/mks_can/axis/mks_axis_state_cache.h
@@ -216,12 +192,11 @@ endif()
 target_include_directories(motor_tester_gui PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/drivers/interfaces
     ${CMAKE_CURRENT_SOURCE_DIR}/ui/qt
-    ${CMAKE_CURRENT_SOURCE_DIR}/hal_host_service/include
     ${LIBUSB_INCLUDE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty
 )
 
-target_link_libraries(motor_tester_gui PRIVATE Qt6::Widgets ${LIBUSB_LIBRARY} motion_core hal_ipc hal_host_service)
+target_link_libraries(motor_tester_gui PRIVATE Qt6::Widgets ${LIBUSB_LIBRARY} motion_core hal_ipc)
 target_compile_definitions(motor_tester_gui PRIVATE MOTION_CORE_WITH_DRIVERS MOTORCONF_ENABLE_MKS_CAN=$<BOOL:${MOTORCONF_ENABLE_MKS_CAN}> MOTORCONF_ENABLE_ETHERCAT=$<BOOL:${MOTORCONF_ENABLE_ETHERCAT}>)
 if (MOTORCONF_ENABLE_ETHERCAT)
     target_link_libraries(motor_tester_gui PRIVATE ethercat)

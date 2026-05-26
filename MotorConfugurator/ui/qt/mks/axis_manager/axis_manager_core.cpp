@@ -50,21 +50,6 @@ constexpr const char* kEthercatTransportBusRef = "ethercat";
     }
 }
 
-[[nodiscard]] static QString axis_mode_to_string(const int mode_value) {
-    const auto mode = static_cast<motion_core::AxisMode>(mode_value);
-    switch (mode) {
-        case motion_core::AxisMode::ProfilePosition: return QStringLiteral("ProfilePosition");
-        case motion_core::AxisMode::ProfileVelocity: return QStringLiteral("ProfileVelocity");
-        case motion_core::AxisMode::CyclicSyncPosition: return QStringLiteral("CyclicSyncPosition");
-        case motion_core::AxisMode::CyclicSyncVelocity: return QStringLiteral("CyclicSyncVelocity");
-        case motion_core::AxisMode::CyclicSyncTorque: return QStringLiteral("CyclicSyncTorque");
-        case motion_core::AxisMode::Homing: return QStringLiteral("Homing");
-        case motion_core::AxisMode::ManualHoming: return QStringLiteral("ManualHoming");
-        case motion_core::AxisMode::VendorSpecific: return QStringLiteral("VendorSpecific");
-    }
-    return QStringLiteral("Unknown");
-}
-
 [[nodiscard]] static QVariantMap motion_queue_stats_to_qvariant_map(const motion_core::MotionQueueStats& s) {
     QVariantMap stats;
     stats[QStringLiteral("size")]          = static_cast<qulonglong>(s.size);
@@ -237,57 +222,25 @@ AxisManager::AxisManager(QObject* parent) : QObject(parent) {
         if (!stats_map.isEmpty()) emit busStatisticsUpdated(stats_map);
         publishHostState();
     });
-
-    host_service_ = std::make_unique<hal_host_service::HalHostService>();
-
-    // Wire the IPC handler so every ControlFrame from any client
-    // (HexaMotion or local UI) routes through our single execution path.
-    host_service_->set_axis_operation_handler(
-        [this](hal_ipc::OwnerRole caller,
-               hal_ipc::ControlOp op,
-               std::uint16_t axis_id,
-               const hal_ipc::AxisPointDto* point,
-               const hal_ipc::HalControlFrameDto& frame) -> motion_core::Result<std::string> {
-            return executeAxisOperation(caller, op, axis_id, point, frame);
-        });
-
-    host_service_->set_state_provider([this]() -> hal_host_service::HalHostService::HostStateSnapshot {
-        hal_host_service::HalHostService::HostStateSnapshot snap{};
-        std::lock_guard<std::mutex> lock(control_state_mutex_);
-        snap.motion_owner = (control_source_ == hal_host_service::MotionControlSource::HexaMotion)
-            ? hal_ipc::OwnerRole::HexaMotion
-            : hal_ipc::OwnerRole::MotorTesterUi;
-        snap.manual_override_active = (control_source_ == hal_host_service::MotionControlSource::Ui);
-        snap.estop_active = estop_active_;
-        return snap;
-    });
-
-    // Build the shared ingress used for all motion queue submissions.
-    runtime_queue_ingress_ = std::make_shared<hal_host_service::RuntimeQueueIngress>(
-        unified_runtime_,
-        [this]() -> hal_host_service::RuntimeQueueIngressState {
-            hal_host_service::RuntimeQueueIngressState s{};
-            {
-                std::lock_guard<std::mutex> lock(control_state_mutex_);
-                s.control_source = control_source_;
-                s.estop_active   = estop_active_;
-            }
-            // IMPORTANT: do not call external services while holding control_state_mutex_.
-            // Host service state provider also reads control_state_mutex_.
-            if (host_service_) {
-                const auto host_snapshot = host_service_->state_snapshot();
-                s.hexamotion_connected = host_snapshot.connected_hexamotion_client_count > 0;
-            } else {
-                s.hexamotion_connected = false;
-            }
-            return s;
-        });
 }
 
 AxisManager::~AxisManager() {
     if (fast_timer_) fast_timer_->stop();
     if (slow_timer_) slow_timer_->stop();
     closeDevice();
+}
+
+bool AxisManager::isReady() const {
+    const auto listed = unified_runtime_.list_axes();
+    return listed.ok() && !listed.value().empty();
+}
+
+std::shared_ptr<motion_core::IAxis> AxisManager::getAxis(int axis_id) const {
+    auto res = unified_runtime_.find_axis(axis_id);
+    if (res.ok()) {
+        return res.value();
+    }
+    return nullptr;
 }
 
 // ---------------------------------------------------------------------------
@@ -299,32 +252,29 @@ void AxisManager::publishHostState() {
     bool manual_override_active = true;
     bool estop_active = false;
     bool mks_homing_sequence_ui_lock_active = false;
-    hal_host_service::MotionControlSource control_source = hal_host_service::MotionControlSource::Ui;
+    motion_core::ControlOwner control_source = motion_core::ControlOwner::UI;
     bool ipc_server_running = false;
     int connected_hexamotion_client_count = 0;
 
     {
         std::lock_guard<std::mutex> lock(control_state_mutex_);
-        control_source = control_source_;
-        motion_owner = (control_source_ == hal_host_service::MotionControlSource::HexaMotion)
+        control_source = active_source_.load();
+        motion_owner = (control_source == motion_core::ControlOwner::HexaMotion)
             ? hal_ipc::OwnerRole::HexaMotion
             : hal_ipc::OwnerRole::MotorTesterUi;
-        manual_override_active = (control_source_ == hal_host_service::MotionControlSource::Ui);
+        manual_override_active = (control_source == motion_core::ControlOwner::UI);
         estop_active = estop_active_;
         mks_homing_sequence_ui_lock_active = mks_homing_sequence_ui_lock_active_;
     }
 
-    if (host_service_) {
-        const auto snapshot = host_service_->state_snapshot();
-        ipc_server_running = snapshot.ipc_server_running;
-        connected_hexamotion_client_count = snapshot.connected_hexamotion_client_count;
-    }
+    ipc_server_running = ipc_server_.is_running();
+    connected_hexamotion_client_count = ipc_server_.connected_client_count();
 
     QVariantMap state;
     state.insert(QStringLiteral("motion_owner"),             owner_role_to_string(motion_owner));
     state.insert(QStringLiteral("manual_override_active"),   manual_override_active);
     state.insert(QStringLiteral("estop_active"),             estop_active);
-    const bool hexamotion_owns = (control_source == hal_host_service::MotionControlSource::HexaMotion);
+    const bool hexamotion_owns = (control_source == motion_core::ControlOwner::HexaMotion);
     state.insert(QStringLiteral("control_source"),
                  hexamotion_owns ? QStringLiteral("hexamotion") : QStringLiteral("ui"));
     state.insert(QStringLiteral("hexamotion_ipc_running"),        ipc_server_running);
@@ -333,10 +283,7 @@ void AxisManager::publishHostState() {
     emit hostStateUpdated(state);
 }
 
-bool AxisManager::isReady() const {
-    const auto listed = unified_runtime_.list_axes();
-    return listed.ok() && !listed.value().empty();
-}
+
 
 void AxisManager::removeTransportConfig(const motion_core::AxisTransportKind transport) {
     if (transport == motion_core::AxisTransportKind::CanBus)
@@ -393,9 +340,7 @@ void AxisManager::rebuildRuntimeFromCurrentConfig() {
     runtime_started_axes_.clear();
     mks_axes_.clear();
     ethercat_axes_.clear();
-    pending_mode_switch_requested_.clear();
-    pending_mode_switch_cycles_.clear();
-    last_reported_mode_.clear();
+
 
     if (unified_runtime_.is_active()) (void)unified_runtime_.stop();
     if (unified_runtime_.is_open())   (void)unified_runtime_.close();
@@ -620,9 +565,7 @@ void AxisManager::reset_runtime_state() {
     mks_axes_.clear();
     ethercat_axes_.clear();
     ui_priority_axis_id_ = -1;
-    pending_mode_switch_requested_.clear();
-    pending_mode_switch_cycles_.clear();
-    last_reported_mode_.clear();
+
     if (unified_runtime_.is_open()) (void)unified_runtime_.close();
 }
 
@@ -648,20 +591,27 @@ motion_core::Result<void> AxisManager::startRuntimeHeadless() {
         fast_timer_->start();
         slow_timer_->start();
 
-        if (host_service_ && !host_service_->is_running()) {
-            hal_host_service::HalHostServiceConfig ipc_cfg{};
-            const auto ipc_res = host_service_->start(ipc_cfg);
+        if (!ipc_server_.is_running()) {
+            const std::string bind_host = "127.0.0.1";
+            const int port = 5555;
+            const auto ipc_res = ipc_server_.start(
+                bind_host, port,
+                [this](const hal_ipc::HalControlFrameDto& frame) { return handleControlFrame(frame); },
+                []() {});
             if (ipc_res.ok())
                 emit logMessage(QStringLiteral("hal"),
                                 QStringLiteral("IPC server listening on %1:%2")
-                                    .arg(QString::fromStdString(ipc_cfg.bind_host))
-                                    .arg(ipc_cfg.port));
+                                    .arg(QString::fromStdString(bind_host))
+                                    .arg(port));
             else
                 emit logMessage(QStringLiteral("hal"),
                                 QStringLiteral("IPC server start failed: %1")
                                     .arg(QString::fromStdString(ipc_res.error().message)));
         }
     }
+    // Broadcast initial owner to newly initialized axes
+    setMotionSource(active_source_.load());
+
     return motion_core::Result<void>::success();
 }
 
@@ -750,7 +700,7 @@ void AxisManager::closeEthercatDevice() {
 void AxisManager::closeDevice() {
     if (fast_timer_) fast_timer_->stop();
     if (slow_timer_) slow_timer_->stop();
-    if (host_service_ && host_service_->is_running()) (void)host_service_->stop();
+    if (ipc_server_.is_running()) ipc_server_.stop();
     watched_axes_.clear();
     ui_priority_axis_id_ = -1;
     rr_index_ = 0;
@@ -765,7 +715,7 @@ void AxisManager::closeDevice() {
     current_hal_config_ = {};
     {
         std::lock_guard<std::mutex> lock(control_state_mutex_);
-        control_source_ = hal_host_service::MotionControlSource::Ui;
+        active_source_ = motion_core::ControlOwner::UI;
         estop_active_   = false;
         mks_homing_sequence_ui_lock_active_ = false;
     }
@@ -799,7 +749,7 @@ void AxisManager::startRuntime() {
 void AxisManager::stopRuntime() {
     if (fast_timer_) fast_timer_->stop();
     if (slow_timer_) slow_timer_->stop();
-    if (host_service_ && host_service_->is_running()) (void)host_service_->stop();
+    if (ipc_server_.is_running()) ipc_server_.stop();
     watched_axes_.clear();
     rr_index_ = 0;
     if (unified_runtime_.is_active()) (void)unified_runtime_.stop();
@@ -970,18 +920,33 @@ void AxisManager::watchAxis(int axis_id, bool enabled) {
     }
 }
 
-void AxisManager::setControlSource(const hal_host_service::MotionControlSource source) {
+void AxisManager::setMotionSource(const motion_core::ControlOwner source) {
     bool changed = false;
     {
         std::lock_guard<std::mutex> lock(control_state_mutex_);
-        if (control_source_ != source) {
-            control_source_ = source;
+        if (active_source_ != source) {
+            active_source_ = source;
             changed = true;
         }
     }
     if (!changed) return;
-    emit manualTakeoverChanged(source == hal_host_service::MotionControlSource::Ui);
+    
+    // Broadcast active source to all axes
+    const auto listed = unified_runtime_.list_axes();
+    if (listed.ok()) {
+        for (const auto& info : listed.value()) {
+            if (auto axis = getAxis(info.id.value)) {
+                axis->setControlOwner(source);
+            }
+        }
+    }
+    
+    emit manualTakeoverChanged(source == motion_core::ControlOwner::UI);
     publishHostState();
+}
+
+motion_core::ControlOwner AxisManager::activeSource() const {
+    return active_source_.load();
 }
 
 void AxisManager::emergencyStop(int axis_id) {
@@ -1008,8 +973,8 @@ void AxisManager::emergencyStop(int axis_id) {
 // ---------------------------------------------------------------------------
 
 void AxisManager::requestManualTakeover(bool enable) {
-    setControlSource(enable ? hal_host_service::MotionControlSource::Ui
-                            : hal_host_service::MotionControlSource::HexaMotion);
+    setMotionSource(enable ? motion_core::ControlOwner::UI
+                           : motion_core::ControlOwner::HexaMotion);
 }
 
 // ---------------------------------------------------------------------------
@@ -1093,25 +1058,6 @@ void AxisManager::onFastTick() {
                 t[QStringLiteral("protection_rx_hz")]    = cycle_hz;
             }
 
-            const int mode_value = static_cast<int>(telem.mode);
-            last_reported_mode_[axis_id] = mode_value;
-
-            const auto pending_it = pending_mode_switch_requested_.find(axis_id);
-            if (pending_it != pending_mode_switch_requested_.end()) {
-                const int requested_mode = pending_it->second;
-                auto& cycles = pending_mode_switch_cycles_[axis_id];
-                cycles += 1U;
-
-                if (mode_value == requested_mode) {
-                    emit logMessage(QStringLiteral("ecat"),
-                                    QString("Axis %1 mode switch confirmed -> %2 (%3 cycles)")
-                                        .arg(axis_id)
-                                        .arg(axis_mode_to_string(mode_value))
-                                        .arg(cycles));
-                    pending_mode_switch_requested_.erase(pending_it);
-                    pending_mode_switch_cycles_.erase(axis_id);
-                }
-            }
             emit telemetryUpdated(axis_id, t);
         }
     }

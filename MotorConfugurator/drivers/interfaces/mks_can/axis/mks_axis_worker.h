@@ -1,11 +1,11 @@
 #pragma once
 
-#include "mks_can/motion/mks_motion_mode.h"
 #include "motion_core/axis_data.h"
 #include "motion_core/result.h"
 #include "motion_core/spsc_queue.h"
 #include "motion_core/types.h"
 
+#include <array>
 #include <atomic>
 #include <chrono>
 #include <cstddef>
@@ -16,6 +16,42 @@
 
 namespace mks {
 
+struct MksBusCommand {
+    std::uint16_t can_id{0};
+    std::uint8_t command{0};
+    std::array<std::uint8_t, 8> payload{};
+    std::uint8_t payload_size{0};
+    bool requires_sync_execute{false};
+
+    void push_back(std::uint8_t byte) {
+        if (payload_size < payload.size()) {
+            payload[payload_size++] = byte;
+        }
+    }
+
+    void append_be16(std::uint16_t value) {
+        push_back(static_cast<std::uint8_t>((value >> 8) & 0xFF));
+        push_back(static_cast<std::uint8_t>(value & 0xFF));
+    }
+
+    void append_be24(std::int32_t value) {
+        const std::uint32_t v = static_cast<std::uint32_t>(value) & 0x00FFFFFFu;
+        push_back(static_cast<std::uint8_t>((v >> 16) & 0xFF));
+        push_back(static_cast<std::uint8_t>((v >> 8) & 0xFF));
+        push_back(static_cast<std::uint8_t>(v & 0xFF));
+    }
+};
+
+struct MksMotionBuildContext {
+    std::uint16_t can_id{0};
+    double axis_units_per_degree{1.0};
+    double software_gear_ratio{1.0};
+    double bus_cycle_period_sec{0.0025};
+    bool invert_direction{false};
+    bool telemetry_invert_position_sign{false};
+    std::uint16_t fallback_speed_rpm{300};
+    std::uint8_t fallback_accel_byte{204};
+};
 class MksAxisWorker final {
 public:
     struct Config {
@@ -75,14 +111,22 @@ private:
     void handle_motion_request(std::chrono::steady_clock::time_point now);
     void push_tx_command(const MksBusCommand& command);
     void push_telemetry_sample(const motion_core::TelemetrySnapshot& telemetry);
-    [[nodiscard]] MksMotionModeBase* active_motion_mode();
-    [[nodiscard]] MksMotionBuildContext build_motion_context() const;
+    [[nodiscard]] static motion_core::Result<MksBusCommand> build_absolute_command(
+        const MksMotionBuildContext& context,
+        const motion_core::MotionCommandPoint& point);
+
+    [[nodiscard]] static motion_core::Result<MksBusCommand> build_velocity_command(
+        const MksMotionBuildContext& context,
+        const motion_core::MotionCommandPoint& point);
+
+    static constexpr std::size_t kMotionQueuePhysicalCapacity = 2048U;
 
     Config config_{};
 
     std::atomic<bool> estop_latched_{false};
     std::atomic<motion_core::AxisMode> mode_{motion_core::AxisMode::ProfilePosition};
     std::atomic<int> pending_work_mode_{-1}; // -1=no request, [0..5]=SetWorkMode payload
+    std::atomic<int> current_hardware_mode_{-1};
     std::atomic<std::uint16_t> runtime_can_id_{1};
     std::atomic<double> axis_units_per_degree_runtime_{16384.0 / 360.0};
     std::atomic<double> software_gear_ratio_runtime_{1.0};
@@ -98,9 +142,13 @@ private:
 
     std::atomic<motion_core::TelemetrySnapshot> latest_telemetry_{};
 
-    MksAbsolutePositionMotionMode absolute_mode_{};
-    MksVelocityMotionMode velocity_mode_{};
-    MksMotionModeBase* active_mode_controller_{nullptr};
+    motion_core::SpscQueue<motion_core::MotionCommandPoint, kMotionQueuePhysicalCapacity + 1U> motion_queue_{};
+    std::atomic<std::size_t> motion_queue_capacity_limit_{kMotionQueuePhysicalCapacity};
+    std::atomic<bool> motion_queue_drop_oldest_policy_{true};
+    std::atomic<std::uint64_t> motion_points_pushed_{0U};
+    std::atomic<std::uint64_t> motion_points_dropped_{0U};
+    std::atomic<std::uint64_t> motion_queue_underruns_{0U};
+    std::atomic<std::uint64_t> motion_queue_short_starts_{0U};
 };
 
 } // namespace mks

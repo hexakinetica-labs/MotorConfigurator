@@ -67,31 +67,40 @@ namespace {
     return raw_group.isEmpty() ? QStringLiteral("Ungrouped") : raw_group;
 }
 
+template <typename Func, typename Callback>
+void runAsyncAxisTask(AxisManager* manager, int axis_id, Func&& bg_task, Callback&& main_callback) {
+    std::thread([manager, axis_id, bg = std::forward<Func>(bg_task), cb = std::forward<Callback>(main_callback)]() mutable {
+        auto axis_ptr = manager->getAxis(axis_id);
+        if (!axis_ptr) {
+            using RetType = std::invoke_result_t<Func, std::shared_ptr<motion_core::IAxis>>;
+            RetType err = RetType::failure({motion_core::ErrorCode::NotFound, "Axis not found"});
+            QMetaObject::invokeMethod(manager, [cb = std::move(cb), err = std::move(err)]() mutable {
+                cb(std::move(err));
+            }, Qt::QueuedConnection);
+            return;
+        }
+        auto result = bg(axis_ptr);
+        QMetaObject::invokeMethod(manager, [cb = std::move(cb), result = std::move(result)]() mutable {
+            cb(std::move(result));
+        }, Qt::QueuedConnection);
+    }).detach();
+}
+
 } // namespace
 
 // ---------------------------------------------------------------------------
 // requestListParameters
 // ---------------------------------------------------------------------------
 void AxisManager::requestListParameters(int axis_id) {
-    const auto axis_res = unified_runtime_.find_axis(static_cast<std::uint16_t>(axis_id));
-    if (!axis_res.ok()) {
-        emit logMessage(QStringLiteral("hal"),
-                        QString("Axis %1 list parameters failed: axis not found").arg(axis_id));
-        return;
-    }
     if (parameter_reads_in_progress_.contains(axis_id)) return;
     parameter_reads_in_progress_.insert(axis_id);
 
-    std::thread([this, axis_id]() {
-        const auto axis_res_inner = unified_runtime_.find_axis(static_cast<std::uint16_t>(axis_id));
-        if (!axis_res_inner.ok()) return;
-
-        auto result = axis_res_inner.value()->list_parameters();
-        const auto axis_info = axis_res_inner.value()->info();
-
-        QMetaObject::invokeMethod(this, [this, axis_id, result, axis_info]() mutable {
+    runAsyncAxisTask(this, axis_id,
+        [](std::shared_ptr<motion_core::IAxis> axis) {
+            return axis->list_parameters();
+        },
+        [this, axis_id](motion_core::Result<std::vector<motion_core::ParameterDescriptor>> result) {
             parameter_reads_in_progress_.remove(axis_id);
-
             if (!result.ok()) {
                 emit logMessage(QStringLiteral("hal"),
                                 QString("Axis %1 list parameters failed: %2")
@@ -99,13 +108,16 @@ void AxisManager::requestListParameters(int axis_id) {
                 return;
             }
 
+            const auto axis_ptr = getAxis(axis_id);
+            const auto transport = axis_ptr ? axis_ptr->info().transport : motion_core::AxisTransportKind::CanBus;
+
             QVariantList out;
             for (const auto& pd : result.value()) {
                 QVariantMap item;
                 item.insert(QStringLiteral("domain"),      static_cast<int>(pd.id.domain));
                 item.insert(QStringLiteral("value"),       static_cast<int>(pd.id.value));
                 item.insert(QStringLiteral("name"),        QString::fromLatin1(pd.name));
-                item.insert(QStringLiteral("group"),       normalize_group_for_display(axis_info.transport, pd));
+                item.insert(QStringLiteral("group"),       normalize_group_for_display(transport, pd));
                 item.insert(QStringLiteral("unit"),        QString::fromLatin1(pd.unit));
                 item.insert(QStringLiteral("read_only"),   pd.read_only);
                 item.insert(QStringLiteral("persistable"), pd.persistable);
@@ -116,32 +128,22 @@ void AxisManager::requestListParameters(int axis_id) {
                 out.push_back(item);
             }
             emit parameterListReady(axis_id, out);
-        }, Qt::QueuedConnection);
-    }).detach();
+        });
 }
 
 // ---------------------------------------------------------------------------
 // requestReadParameters
 // ---------------------------------------------------------------------------
 void AxisManager::requestReadParameters(int axis_id) {
-    const auto axis_res = unified_runtime_.find_axis(static_cast<std::uint16_t>(axis_id));
-    if (!axis_res.ok()) {
-        emit logMessage(QStringLiteral("hal"),
-                        QString("Axis %1 read parameters failed: axis not found").arg(axis_id));
-        return;
-    }
     if (parameter_reads_in_progress_.contains(axis_id)) return;
     parameter_reads_in_progress_.insert(axis_id);
 
-    std::thread([this, axis_id]() {
-        const auto axis_res_inner = unified_runtime_.find_axis(static_cast<std::uint16_t>(axis_id));
-        if (!axis_res_inner.ok()) return;
-
-        auto read_res = axis_res_inner.value()->read_parameters();
-
-        QMetaObject::invokeMethod(this, [this, axis_id, read_res]() mutable {
+    runAsyncAxisTask(this, axis_id,
+        [](std::shared_ptr<motion_core::IAxis> axis) {
+            return axis->read_parameters();
+        },
+        [this, axis_id](motion_core::Result<motion_core::ParameterSet> read_res) {
             parameter_reads_in_progress_.remove(axis_id);
-
             if (!read_res.ok()) {
                 emit logMessage(QStringLiteral("hal"),
                                 QString("Axis %1 read parameters failed: %2")
@@ -158,21 +160,13 @@ void AxisManager::requestReadParameters(int axis_id) {
                 out.push_back(item);
             }
             emit parametersRead(axis_id, out);
-        }, Qt::QueuedConnection);
-    }).detach();
+        });
 }
 
 // ---------------------------------------------------------------------------
 // applyParameterPatch
 // ---------------------------------------------------------------------------
 void AxisManager::applyParameterPatch(int axis_id, const QVariantList& patch) {
-    const auto axis_res = unified_runtime_.find_axis(static_cast<std::uint16_t>(axis_id));
-    if (!axis_res.ok()) {
-        emit logMessage(QStringLiteral("hal"),
-                        QString("Axis %1 parameter patch failed: axis not found").arg(axis_id));
-        return;
-    }
-
     motion_core::ParameterPatch param_patch{};
     for (const QVariant& entry_v : patch) {
         const QVariantMap entry = entry_v.toMap();
@@ -197,15 +191,12 @@ void AxisManager::applyParameterPatch(int axis_id, const QVariantList& patch) {
 
     parameter_writes_in_progress_.insert(axis_id);
     
-    std::thread([this, axis_id, param_patch]() {
-        const auto axis_res_inner = unified_runtime_.find_axis(static_cast<std::uint16_t>(axis_id));
-        if (!axis_res_inner.ok()) return;
-
-        auto write_res = axis_res_inner.value()->apply_parameter_patch(param_patch);
-
-        QMetaObject::invokeMethod(this, [this, axis_id, param_patch, write_res]() mutable {
+    runAsyncAxisTask(this, axis_id,
+        [param_patch](std::shared_ptr<motion_core::IAxis> axis) {
+            return axis->apply_parameter_patch(param_patch);
+        },
+        [this, axis_id, param_patch_size = param_patch.entries.size()](motion_core::Result<void> write_res) {
             parameter_writes_in_progress_.remove(axis_id);
-
             if (!write_res.ok())
                 emit logMessage(QStringLiteral("hal"),
                                 QString("Axis %1 parameter patch failed: %2")
@@ -213,9 +204,8 @@ void AxisManager::applyParameterPatch(int axis_id, const QVariantList& patch) {
             else
                 emit logMessage(QStringLiteral("hal"),
                                 QString("Axis %1 parameter patch applied (%2 entries)")
-                                    .arg(axis_id).arg(param_patch.entries.size()));
-        }, Qt::QueuedConnection);
-    }).detach();
+                                    .arg(axis_id).arg(param_patch_size));
+        });
 }
 
 // ---------------------------------------------------------------------------
@@ -223,13 +213,6 @@ void AxisManager::applyParameterPatch(int axis_id, const QVariantList& patch) {
 // ---------------------------------------------------------------------------
 void AxisManager::setPersistentParameter(int axis_id, int domain, int value,
                                          const QString& /*name*/, const QVariant& data) {
-    const auto axis_res = unified_runtime_.find_axis(static_cast<std::uint16_t>(axis_id));
-    if (!axis_res.ok()) {
-        emit logMessage(QStringLiteral("hal"),
-                        QString("Axis %1 set persistent failed: axis not found").arg(axis_id));
-        return;
-    }
-
     motion_core::ParameterEntry pe{};
     pe.id.domain = static_cast<motion_core::ParameterDomain>(domain);
     pe.id.value  = static_cast<std::uint32_t>(value);
@@ -248,20 +231,17 @@ void AxisManager::setPersistentParameter(int axis_id, int domain, int value,
     motion_core::ParameterPatch param_patch{};
     param_patch.entries.push_back(pe);
 
-    std::thread([this, axis_id, param_patch, domain, value]() {
-        const auto axis_res_inner = unified_runtime_.find_axis(static_cast<std::uint16_t>(axis_id));
-        if (!axis_res_inner.ok()) return;
-
-        auto write_res = axis_res_inner.value()->apply_parameter_patch(param_patch);
-
-        QMetaObject::invokeMethod(this, [this, axis_id, domain, value, write_res]() mutable {
+    runAsyncAxisTask(this, axis_id,
+        [param_patch](std::shared_ptr<motion_core::IAxis> axis) {
+            return axis->apply_parameter_patch(param_patch);
+        },
+        [this, axis_id, domain, value](motion_core::Result<void> write_res) {
             if (!write_res.ok())
                 emit logMessage(QStringLiteral("hal"),
                                 QString("Axis %1 set persistent %2/%3 failed: %4")
                                     .arg(axis_id).arg(domain).arg(value)
                                     .arg(QString::fromStdString(write_res.error().message)));
-        }, Qt::QueuedConnection);
-    }).detach();
+        });
 }
 
 } // namespace mks

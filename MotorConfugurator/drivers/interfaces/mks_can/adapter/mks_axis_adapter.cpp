@@ -97,6 +97,10 @@ bool MksAxisAdapter::enqueueCommandPoint(const motion_core::MotionCommandPoint& 
 bool MksAxisAdapter::enqueue_service_point_impl(const motion_core::ServiceCommandPoint& p,
                                                 const bool internal_request) {
     if (!internal_request) {
+        if (p.source != active_source_.load(std::memory_order_acquire)) {
+            return false;
+        }
+
         if (p.type == motion_core::ServiceCommandType::Home) {
             if (homing_active_.load(std::memory_order_acquire)
                 || homing_start_requested_.load(std::memory_order_acquire)) {
@@ -132,8 +136,7 @@ bool MksAxisAdapter::enqueue_service_point_impl(const motion_core::ServiceComman
     if (p.type == motion_core::ServiceCommandType::Disable
         || p.type == motion_core::ServiceCommandType::Home
         || p.type == motion_core::ServiceCommandType::SetZero
-        || p.type == motion_core::ServiceCommandType::ClearMotionQueue
-        || p.type == motion_core::ServiceCommandType::SetOperatingMode) {
+        || p.type == motion_core::ServiceCommandType::ClearMotionQueue) {
         has_requested_target_position_.store(false, std::memory_order_release);
     }
     if (p.type == motion_core::ServiceCommandType::SetZero) {
@@ -146,10 +149,14 @@ bool MksAxisAdapter::enqueue_service_point_impl(const motion_core::ServiceComman
 
 bool MksAxisAdapter::enqueue_command_point_impl(const motion_core::MotionCommandPoint& point,
                                                 const bool internal_request) {
-    if (!internal_request
-        && (homing_active_.load(std::memory_order_acquire)
-            || homing_start_requested_.load(std::memory_order_acquire))) {
-        return false;
+    if (!internal_request) {
+        if (point.source != active_source_.load(std::memory_order_acquire)) {
+            return false;
+        }
+        if (homing_active_.load(std::memory_order_acquire)
+            || homing_start_requested_.load(std::memory_order_acquire)) {
+            return false;
+        }
     }
 
     motion_core::MotionCommandPoint normalized_point = point;
@@ -215,9 +222,7 @@ void MksAxisAdapter::estop() {
 }
 
 void MksAxisAdapter::setControlOwner(motion_core::ControlOwner owner) {
-    // Adapter technically doesn't own this state in a complex way for now, UI layer controls mapping.
-    // The Boss specifically allowed it to exist on IAxis, but it's typically used inside RuntimeQueueIngress.
-    (void)owner;
+    active_source_.store(owner, std::memory_order_release);
 }
 
 motion_core::Result<std::vector<motion_core::ParameterDescriptor>> MksAxisAdapter::list_parameters() const {

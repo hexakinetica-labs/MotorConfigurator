@@ -27,7 +27,6 @@ const char* control_op_to_string(const ControlOp op) {
         case ControlOp::ClearFault: return "ClearFault";
         case ControlOp::Home: return "Home";
         case ControlOp::EnqueueMotionBatch: return "EnqueueMotionBatch";
-        case ControlOp::SetAxisMode: return "SetAxisMode";
         case ControlOp::ConfigureMotionQueue: return "ConfigureMotionQueue";
         case ControlOp::ClearMotionQueue: return "ClearMotionQueue";
         case ControlOp::QueryMotionQueueStats: return "QueryMotionQueueStats";
@@ -39,6 +38,9 @@ const char* control_op_to_string(const ControlOp op) {
         case ControlOp::ImportAxisConfigPreview: return "ImportAxisConfigPreview";
         case ControlOp::ExportAxisConfig: return "ExportAxisConfig";
         case ControlOp::StartManualHoming: return "StartManualHoming";
+        case ControlOp::StartMksHomingSequence: return "StartMksHomingSequence";
+        case ControlOp::StopMksHomingSequence: return "StopMksHomingSequence";
+
     }
     return "None";
 }
@@ -54,7 +56,6 @@ motion_core::Result<ControlOp> control_op_from_string(const std::string& value) 
     if (value == "ClearFault") return motion_core::Result<ControlOp>::success(ControlOp::ClearFault);
     if (value == "Home") return motion_core::Result<ControlOp>::success(ControlOp::Home);
     if (value == "EnqueueMotionBatch") return motion_core::Result<ControlOp>::success(ControlOp::EnqueueMotionBatch);
-    if (value == "SetAxisMode") return motion_core::Result<ControlOp>::success(ControlOp::SetAxisMode);
     if (value == "ConfigureMotionQueue") return motion_core::Result<ControlOp>::success(ControlOp::ConfigureMotionQueue);
     if (value == "ClearMotionQueue") return motion_core::Result<ControlOp>::success(ControlOp::ClearMotionQueue);
     if (value == "QueryMotionQueueStats") return motion_core::Result<ControlOp>::success(ControlOp::QueryMotionQueueStats);

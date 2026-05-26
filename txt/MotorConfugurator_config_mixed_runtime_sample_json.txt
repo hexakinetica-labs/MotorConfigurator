@@ -1,0 +1,39 @@
+{
+    "version": 1,
+    "runtime": {
+        "dispatch_period_ms": 4,
+        "telemetry_period_ms": 100
+    },
+    "mks_buses": [
+        {
+            "interface_id": "sim:default",
+            "device_path": "sim:default",
+            "baud_rate": 500000
+        }
+    ],
+    "ethercat_buses": [
+        {
+            "interface_name": "lo"
+        }
+    ],
+    "axes": [
+        {
+            "axis_id": 1,
+            "axis_name": "Mixed Axis CAN 1",
+            "transport": "mks_can",
+            "bus_ref": "sim:default",
+            "transport_address": 1,
+            "config_file": "config_axis_1.json",
+            "enable_on_start": false
+        },
+        {
+            "axis_id": 101,
+            "axis_name": "Mixed Axis ECAT 101",
+            "transport": "ethercat",
+            "bus_ref": "lo",
+            "transport_address": 0,
+            "config_file": "config_axis_101.json",
+            "enable_on_start": false
+        }
+    ]
+}

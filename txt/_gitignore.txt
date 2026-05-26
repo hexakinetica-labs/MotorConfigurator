@@ -1,0 +1,48 @@
+# Build directories
+build/
+build_*/
+cmake-build-*/
+out/
+3rdparty/
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps/
+
+# Qt generated
+*_autogen/
+*.qm
+moc_*.cpp
+ui_*.h
+qrc_*.cpp
+
+# Compiled binaries
+*.o
+*.a
+*.so
+*.so.*
+*.dylib
+*.dll
+*.exe
+
+# IDE
+.vscode/settings.json
+.idea/
+*.user
+*.creator.user
+*.pro.user*
+*.qbs.user
+
+# Logs & temp
+*.log
+*.tmp
+*.swp
+*~
+
+# OS
+.DS_Store
+Thumbs.db

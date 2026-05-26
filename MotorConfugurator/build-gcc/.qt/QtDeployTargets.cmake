@@ -4,8 +4,6 @@ set(__QT_DEPLOY_TARGET_motion_core_no_hw_FILE D:/2.Github/MotorConfigurator/Moto
 set(__QT_DEPLOY_TARGET_motion_core_no_hw_TYPE STATIC_LIBRARY)
 set(__QT_DEPLOY_TARGET_hal_ipc_FILE D:/2.Github/MotorConfigurator/MotorConfugurator/build-gcc/libhal_ipc.a)
 set(__QT_DEPLOY_TARGET_hal_ipc_TYPE STATIC_LIBRARY)
-set(__QT_DEPLOY_TARGET_hal_host_service_FILE D:/2.Github/MotorConfigurator/MotorConfugurator/build-gcc/libhal_host_service.a)
-set(__QT_DEPLOY_TARGET_hal_host_service_TYPE STATIC_LIBRARY)
 set(__QT_DEPLOY_TARGET_mks_can_cli_FILE D:/2.Github/MotorConfigurator/MotorConfugurator/build-gcc/mks_can_cli.exe)
 set(__QT_DEPLOY_TARGET_mks_can_cli_TYPE EXECUTABLE)
 set(__QT_DEPLOY_TARGET_mks_can_cli_RUNTIME_DLLS )
