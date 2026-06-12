@@ -1,0 +1,126 @@
+#pragma once
+
+#include "mks_can/mks_axis_configurator.h"
+#include "mks_can/axis_cycle_metrics.h"
+#include "mks_can/mks_axis_state_cache.h"
+#include "mks_can/mks_axis_worker.h"
+#include "mks_can/mks_homing_state_machine.h"
+#include "mks_can/mks_can_bus_manager.h"
+#include "motion_core/axis_interface.h"
+#include "motion_core/spsc_queue.h"
+
+#include <atomic>
+#include <chrono>
+#include <memory>
+#include <mutex>
+
+namespace mks {
+
+struct MksAxisAdapterConfig {
+    motion_core::AxisId axis_id{};
+    motion_core::AxisName axis_name{};
+    std::uint16_t can_id{1};
+    std::shared_ptr<MksCanBusManager> bus_manager{};
+
+    double axis_units_per_degree{16384.0 / 360.0};
+    double software_gear_ratio{1.0};
+    bool invert_direction{false};
+    bool telemetry_invert_position_sign{false};
+    std::uint16_t default_speed_rpm{300};
+    std::uint8_t default_accel_byte{204};
+};
+
+struct AxisPositionSample final {
+    std::uint64_t timestamp_ns{0U};
+    double position_deg{0.0};
+};
+
+class MksAxisAdapter final : public motion_core::IAxis {
+public:
+    explicit MksAxisAdapter(MksAxisAdapterConfig config);
+    ~MksAxisAdapter() override;
+
+    [[nodiscard]] motion_core::AxisInfo info() const override;
+    // Minimum Orchestration Contract
+    bool enqueueServicePoint(const motion_core::ServiceCommandPoint& p) override;
+    bool enqueueCommandPoint(const motion_core::MotionCommandPoint& point) override;
+    motion_core::TelemetrySnapshot telemetry() const override;
+    void estop() override;
+    void setControlOwner(motion_core::ControlOwner owner) override;
+
+    // Parameter Tree
+    [[nodiscard]] motion_core::Result<std::vector<motion_core::ParameterDescriptor>> list_parameters() const override;
+    [[nodiscard]] motion_core::Result<motion_core::ParameterSet> read_parameters() const override;
+    motion_core::Result<void> apply_parameter_patch(const motion_core::ParameterPatch& patch) override;
+    [[nodiscard]] motion_core::Result<motion_core::PersistentWriteReport> set_persistent(
+        motion_core::PersistentCommand command,
+        const motion_core::ParameterValue& value) override;
+
+    bool consume_tx_command(MksBusCommand& command);
+    void step_worker(std::chrono::steady_clock::time_point now);
+    void publish_polled_telemetry(const motion_core::TelemetrySnapshot& telemetry);
+    void mark_command_tx();
+    void mark_telemetry_publish();
+    void mark_position_rx();
+    void mark_speed_rx();
+    void mark_status_rx();
+    void mark_protection_rx();
+    [[nodiscard]] AxisCycleMetricsSnapshot cycle_metrics_snapshot() const;
+    [[nodiscard]] motion_core::MotionQueueStats query_motion_queue_stats() const override;
+    [[nodiscard]] std::size_t drain_position_samples(std::vector<AxisPositionSample>& out_samples,
+                                                     std::size_t max_samples) const;
+    [[nodiscard]] std::uint16_t runtime_can_id() const;
+    [[nodiscard]] double axis_units_per_degree() const;
+    [[nodiscard]] double requested_target_position_deg() const;
+    [[nodiscard]] bool has_requested_target_position() const;
+    [[nodiscard]] double software_gear_ratio() const;
+    [[nodiscard]] bool invert_direction() const;
+    [[nodiscard]] bool telemetry_invert_position_sign() const;
+    [[nodiscard]] bool config_busy() const;
+    [[nodiscard]] motion_core::AxisMode current_mode() const;
+    [[nodiscard]] motion_core::Result<void> sync_motion_runtime_from_configurator();
+    [[nodiscard]] const char* homing_status_text() const;
+
+private:
+    enum class HomingStatus : std::uint8_t {
+        Idle = 0,
+        StartingHardwareHome,
+        WaitingHardwareHomeActive,
+        WaitingHardwareHomeDone,
+        MovingToOffset,
+        ApplyingSetZero,
+        Completed,
+        Failed
+    };
+
+    bool enqueue_service_point_impl(const motion_core::ServiceCommandPoint& p, bool internal_request);
+    bool enqueue_command_point_impl(const motion_core::MotionCommandPoint& point, bool internal_request);
+    void process_homing_state_machine(std::chrono::steady_clock::time_point now);
+    void set_homing_status(HomingStatus status) noexcept;
+    [[nodiscard]] static const char* homing_status_to_cstr(HomingStatus status) noexcept;
+
+    MksAxisAdapterConfig config_{};
+    MksAxisStateCache state_cache_{};
+    std::unique_ptr<MksAxisWorker> worker_{};
+    std::unique_ptr<MksAxisConfigurator> configurator_{};
+    std::atomic<std::uint16_t> runtime_can_id_{1};
+    std::atomic<double> axis_units_per_degree_runtime_{16384.0 / 360.0};
+    std::atomic<double> requested_target_position_deg_{0.0};
+    std::atomic<bool> has_requested_target_position_{false};
+    std::atomic<bool> homing_start_requested_{false};
+    std::atomic<bool> homing_cancel_requested_{false};
+    std::atomic<bool> homing_active_{false};
+    std::atomic<std::uint8_t> homing_status_{static_cast<std::uint8_t>(HomingStatus::Idle)};
+    std::atomic<motion_core::ControlOwner> active_source_{motion_core::ControlOwner::UI};
+    AxisCycleMetrics cycle_metrics_{};
+    mutable motion_core::SpscQueue<AxisPositionSample, 2048U> position_samples_{};
+    std::mutex command_mutex_{};
+    MksHomingStateMachine homing_state_machine_{};
+};
+
+[[nodiscard]] std::shared_ptr<motion_core::IAxis> make_mks_axis_adapter(MksAxisAdapterConfig config);
+
+} // namespace mks
+
+
+

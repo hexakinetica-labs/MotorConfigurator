@@ -9,17 +9,17 @@
 #endif
 
 #if MOTORCONF_ENABLE_MKS_CAN
-#include "mks_can/adapter/mks_runtime_factory.h"
-#include "mks_can/manager/mks_topology_scanner.h"
+#include "mks_can/mks_runtime_factory.h"
+#include "mks_can/mks_topology_scanner.h"
 #endif
 
 #if MOTORCONF_ENABLE_ETHERCAT
-#include "ethercat/manager/ethercat_runtime_factory.h"
-#include "ethercat/manager/ethercat_bus_manager.h"
+#include "ethercat/ethercat_runtime_factory.h"
+#include "ethercat/ethercat_bus_manager.h"
 #endif
 
 #include "motion_core/runtime_factory_registry.h"
-#include "motion_core/config/hal_runtime_config.h"
+#include "motion_core/hal_runtime_config.h"
 
 namespace drivers {
 

@@ -129,17 +129,17 @@ hal_ipc/fast:
 .PHONY : hal_ipc/fast
 
 #=============================================================================
-# Target rules for targets named mks_can_cli
+# Target rules for targets named hal_host_service
 
 # Build rule for target.
-mks_can_cli: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\Makefile2 mks_can_cli
-.PHONY : mks_can_cli
+hal_host_service: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\Makefile2 hal_host_service
+.PHONY : hal_host_service
 
 # fast build rule for target.
-mks_can_cli/fast:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\mks_can_cli.dir\build.make CMakeFiles/mks_can_cli.dir/build
-.PHONY : mks_can_cli/fast
+hal_host_service/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\hal_host_service.dir\build.make CMakeFiles/hal_host_service.dir/build
+.PHONY : hal_host_service/fast
 
 #=============================================================================
 # Target rules for targets named motor_tester_gui
@@ -181,30 +181,30 @@ hal_ipc_autogen/fast:
 .PHONY : hal_ipc_autogen/fast
 
 #=============================================================================
-# Target rules for targets named mks_can_cli_autogen_timestamp_deps
+# Target rules for targets named hal_host_service_autogen_timestamp_deps
 
 # Build rule for target.
-mks_can_cli_autogen_timestamp_deps: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\Makefile2 mks_can_cli_autogen_timestamp_deps
-.PHONY : mks_can_cli_autogen_timestamp_deps
+hal_host_service_autogen_timestamp_deps: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\Makefile2 hal_host_service_autogen_timestamp_deps
+.PHONY : hal_host_service_autogen_timestamp_deps
 
 # fast build rule for target.
-mks_can_cli_autogen_timestamp_deps/fast:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\mks_can_cli_autogen_timestamp_deps.dir\build.make CMakeFiles/mks_can_cli_autogen_timestamp_deps.dir/build
-.PHONY : mks_can_cli_autogen_timestamp_deps/fast
+hal_host_service_autogen_timestamp_deps/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\hal_host_service_autogen_timestamp_deps.dir\build.make CMakeFiles/hal_host_service_autogen_timestamp_deps.dir/build
+.PHONY : hal_host_service_autogen_timestamp_deps/fast
 
 #=============================================================================
-# Target rules for targets named mks_can_cli_autogen
+# Target rules for targets named hal_host_service_autogen
 
 # Build rule for target.
-mks_can_cli_autogen: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\Makefile2 mks_can_cli_autogen
-.PHONY : mks_can_cli_autogen
+hal_host_service_autogen: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\Makefile2 hal_host_service_autogen
+.PHONY : hal_host_service_autogen
 
 # fast build rule for target.
-mks_can_cli_autogen/fast:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\mks_can_cli_autogen.dir\build.make CMakeFiles/mks_can_cli_autogen.dir/build
-.PHONY : mks_can_cli_autogen/fast
+hal_host_service_autogen/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\hal_host_service_autogen.dir\build.make CMakeFiles/hal_host_service_autogen.dir/build
+.PHONY : hal_host_service_autogen/fast
 
 #=============================================================================
 # Target rules for targets named motor_tester_gui_autogen_timestamp_deps
@@ -258,30 +258,6 @@ motion_core_no_hw/fast:
 	$(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core_no_hw.dir\build.make motion_core_build/CMakeFiles/motion_core_no_hw.dir/build
 .PHONY : motion_core_no_hw/fast
 
-apps/cli/main.obj: apps/cli/main.cpp.obj
-.PHONY : apps/cli/main.obj
-
-# target to build an object file
-apps/cli/main.cpp.obj:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\mks_can_cli.dir\build.make CMakeFiles/mks_can_cli.dir/apps/cli/main.cpp.obj
-.PHONY : apps/cli/main.cpp.obj
-
-apps/cli/main.i: apps/cli/main.cpp.i
-.PHONY : apps/cli/main.i
-
-# target to preprocess a source file
-apps/cli/main.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\mks_can_cli.dir\build.make CMakeFiles/mks_can_cli.dir/apps/cli/main.cpp.i
-.PHONY : apps/cli/main.cpp.i
-
-apps/cli/main.s: apps/cli/main.cpp.s
-.PHONY : apps/cli/main.s
-
-# target to generate assembly for a file
-apps/cli/main.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\mks_can_cli.dir\build.make CMakeFiles/mks_can_cli.dir/apps/cli/main.cpp.s
-.PHONY : apps/cli/main.cpp.s
-
 apps/qt/qt_main.obj: apps/qt/qt_main.cpp.obj
 .PHONY : apps/qt/qt_main.obj
 
@@ -311,7 +287,6 @@ drivers/interfaces/init_all_drivers.obj: drivers/interfaces/init_all_drivers.cpp
 
 # target to build an object file
 drivers/interfaces/init_all_drivers.cpp.obj:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\mks_can_cli.dir\build.make CMakeFiles/mks_can_cli.dir/drivers/interfaces/init_all_drivers.cpp.obj
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/init_all_drivers.cpp.obj
 .PHONY : drivers/interfaces/init_all_drivers.cpp.obj
 
@@ -320,7 +295,6 @@ drivers/interfaces/init_all_drivers.i: drivers/interfaces/init_all_drivers.cpp.i
 
 # target to preprocess a source file
 drivers/interfaces/init_all_drivers.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\mks_can_cli.dir\build.make CMakeFiles/mks_can_cli.dir/drivers/interfaces/init_all_drivers.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/init_all_drivers.cpp.i
 .PHONY : drivers/interfaces/init_all_drivers.cpp.i
 
@@ -329,405 +303,440 @@ drivers/interfaces/init_all_drivers.s: drivers/interfaces/init_all_drivers.cpp.s
 
 # target to generate assembly for a file
 drivers/interfaces/init_all_drivers.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\mks_can_cli.dir\build.make CMakeFiles/mks_can_cli.dir/drivers/interfaces/init_all_drivers.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/init_all_drivers.cpp.s
 .PHONY : drivers/interfaces/init_all_drivers.cpp.s
 
-drivers/interfaces/mks_can/adapter/mks_axis_adapter.obj: drivers/interfaces/mks_can/adapter/mks_axis_adapter.cpp.obj
-.PHONY : drivers/interfaces/mks_can/adapter/mks_axis_adapter.obj
+drivers/interfaces/mks_can/gs_usb_can_port.obj: drivers/interfaces/mks_can/gs_usb_can_port.cpp.obj
+.PHONY : drivers/interfaces/mks_can/gs_usb_can_port.obj
 
 # target to build an object file
-drivers/interfaces/mks_can/adapter/mks_axis_adapter.cpp.obj:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\mks_can_cli.dir\build.make CMakeFiles/mks_can_cli.dir/drivers/interfaces/mks_can/adapter/mks_axis_adapter.cpp.obj
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/adapter/mks_axis_adapter.cpp.obj
-.PHONY : drivers/interfaces/mks_can/adapter/mks_axis_adapter.cpp.obj
+drivers/interfaces/mks_can/gs_usb_can_port.cpp.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/gs_usb_can_port.cpp.obj
+.PHONY : drivers/interfaces/mks_can/gs_usb_can_port.cpp.obj
 
-drivers/interfaces/mks_can/adapter/mks_axis_adapter.i: drivers/interfaces/mks_can/adapter/mks_axis_adapter.cpp.i
-.PHONY : drivers/interfaces/mks_can/adapter/mks_axis_adapter.i
+drivers/interfaces/mks_can/gs_usb_can_port.i: drivers/interfaces/mks_can/gs_usb_can_port.cpp.i
+.PHONY : drivers/interfaces/mks_can/gs_usb_can_port.i
 
 # target to preprocess a source file
-drivers/interfaces/mks_can/adapter/mks_axis_adapter.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\mks_can_cli.dir\build.make CMakeFiles/mks_can_cli.dir/drivers/interfaces/mks_can/adapter/mks_axis_adapter.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/adapter/mks_axis_adapter.cpp.i
-.PHONY : drivers/interfaces/mks_can/adapter/mks_axis_adapter.cpp.i
+drivers/interfaces/mks_can/gs_usb_can_port.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/gs_usb_can_port.cpp.i
+.PHONY : drivers/interfaces/mks_can/gs_usb_can_port.cpp.i
 
-drivers/interfaces/mks_can/adapter/mks_axis_adapter.s: drivers/interfaces/mks_can/adapter/mks_axis_adapter.cpp.s
-.PHONY : drivers/interfaces/mks_can/adapter/mks_axis_adapter.s
+drivers/interfaces/mks_can/gs_usb_can_port.s: drivers/interfaces/mks_can/gs_usb_can_port.cpp.s
+.PHONY : drivers/interfaces/mks_can/gs_usb_can_port.s
 
 # target to generate assembly for a file
-drivers/interfaces/mks_can/adapter/mks_axis_adapter.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\mks_can_cli.dir\build.make CMakeFiles/mks_can_cli.dir/drivers/interfaces/mks_can/adapter/mks_axis_adapter.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/adapter/mks_axis_adapter.cpp.s
-.PHONY : drivers/interfaces/mks_can/adapter/mks_axis_adapter.cpp.s
+drivers/interfaces/mks_can/gs_usb_can_port.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/gs_usb_can_port.cpp.s
+.PHONY : drivers/interfaces/mks_can/gs_usb_can_port.cpp.s
 
-drivers/interfaces/mks_can/adapter/mks_runtime_config.obj: drivers/interfaces/mks_can/adapter/mks_runtime_config.cpp.obj
-.PHONY : drivers/interfaces/mks_can/adapter/mks_runtime_config.obj
+drivers/interfaces/mks_can/mks_axis_adapter.obj: drivers/interfaces/mks_can/mks_axis_adapter.cpp.obj
+.PHONY : drivers/interfaces/mks_can/mks_axis_adapter.obj
 
 # target to build an object file
-drivers/interfaces/mks_can/adapter/mks_runtime_config.cpp.obj:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\mks_can_cli.dir\build.make CMakeFiles/mks_can_cli.dir/drivers/interfaces/mks_can/adapter/mks_runtime_config.cpp.obj
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/adapter/mks_runtime_config.cpp.obj
-.PHONY : drivers/interfaces/mks_can/adapter/mks_runtime_config.cpp.obj
+drivers/interfaces/mks_can/mks_axis_adapter.cpp.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/mks_axis_adapter.cpp.obj
+.PHONY : drivers/interfaces/mks_can/mks_axis_adapter.cpp.obj
 
-drivers/interfaces/mks_can/adapter/mks_runtime_config.i: drivers/interfaces/mks_can/adapter/mks_runtime_config.cpp.i
-.PHONY : drivers/interfaces/mks_can/adapter/mks_runtime_config.i
+drivers/interfaces/mks_can/mks_axis_adapter.i: drivers/interfaces/mks_can/mks_axis_adapter.cpp.i
+.PHONY : drivers/interfaces/mks_can/mks_axis_adapter.i
 
 # target to preprocess a source file
-drivers/interfaces/mks_can/adapter/mks_runtime_config.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\mks_can_cli.dir\build.make CMakeFiles/mks_can_cli.dir/drivers/interfaces/mks_can/adapter/mks_runtime_config.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/adapter/mks_runtime_config.cpp.i
-.PHONY : drivers/interfaces/mks_can/adapter/mks_runtime_config.cpp.i
+drivers/interfaces/mks_can/mks_axis_adapter.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/mks_axis_adapter.cpp.i
+.PHONY : drivers/interfaces/mks_can/mks_axis_adapter.cpp.i
 
-drivers/interfaces/mks_can/adapter/mks_runtime_config.s: drivers/interfaces/mks_can/adapter/mks_runtime_config.cpp.s
-.PHONY : drivers/interfaces/mks_can/adapter/mks_runtime_config.s
+drivers/interfaces/mks_can/mks_axis_adapter.s: drivers/interfaces/mks_can/mks_axis_adapter.cpp.s
+.PHONY : drivers/interfaces/mks_can/mks_axis_adapter.s
 
 # target to generate assembly for a file
-drivers/interfaces/mks_can/adapter/mks_runtime_config.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\mks_can_cli.dir\build.make CMakeFiles/mks_can_cli.dir/drivers/interfaces/mks_can/adapter/mks_runtime_config.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/adapter/mks_runtime_config.cpp.s
-.PHONY : drivers/interfaces/mks_can/adapter/mks_runtime_config.cpp.s
+drivers/interfaces/mks_can/mks_axis_adapter.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/mks_axis_adapter.cpp.s
+.PHONY : drivers/interfaces/mks_can/mks_axis_adapter.cpp.s
 
-drivers/interfaces/mks_can/adapter/mks_runtime_factory.obj: drivers/interfaces/mks_can/adapter/mks_runtime_factory.cpp.obj
-.PHONY : drivers/interfaces/mks_can/adapter/mks_runtime_factory.obj
+drivers/interfaces/mks_can/mks_axis_configurator.obj: drivers/interfaces/mks_can/mks_axis_configurator.cpp.obj
+.PHONY : drivers/interfaces/mks_can/mks_axis_configurator.obj
 
 # target to build an object file
-drivers/interfaces/mks_can/adapter/mks_runtime_factory.cpp.obj:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\mks_can_cli.dir\build.make CMakeFiles/mks_can_cli.dir/drivers/interfaces/mks_can/adapter/mks_runtime_factory.cpp.obj
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/adapter/mks_runtime_factory.cpp.obj
-.PHONY : drivers/interfaces/mks_can/adapter/mks_runtime_factory.cpp.obj
+drivers/interfaces/mks_can/mks_axis_configurator.cpp.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/mks_axis_configurator.cpp.obj
+.PHONY : drivers/interfaces/mks_can/mks_axis_configurator.cpp.obj
 
-drivers/interfaces/mks_can/adapter/mks_runtime_factory.i: drivers/interfaces/mks_can/adapter/mks_runtime_factory.cpp.i
-.PHONY : drivers/interfaces/mks_can/adapter/mks_runtime_factory.i
+drivers/interfaces/mks_can/mks_axis_configurator.i: drivers/interfaces/mks_can/mks_axis_configurator.cpp.i
+.PHONY : drivers/interfaces/mks_can/mks_axis_configurator.i
 
 # target to preprocess a source file
-drivers/interfaces/mks_can/adapter/mks_runtime_factory.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\mks_can_cli.dir\build.make CMakeFiles/mks_can_cli.dir/drivers/interfaces/mks_can/adapter/mks_runtime_factory.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/adapter/mks_runtime_factory.cpp.i
-.PHONY : drivers/interfaces/mks_can/adapter/mks_runtime_factory.cpp.i
+drivers/interfaces/mks_can/mks_axis_configurator.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/mks_axis_configurator.cpp.i
+.PHONY : drivers/interfaces/mks_can/mks_axis_configurator.cpp.i
 
-drivers/interfaces/mks_can/adapter/mks_runtime_factory.s: drivers/interfaces/mks_can/adapter/mks_runtime_factory.cpp.s
-.PHONY : drivers/interfaces/mks_can/adapter/mks_runtime_factory.s
+drivers/interfaces/mks_can/mks_axis_configurator.s: drivers/interfaces/mks_can/mks_axis_configurator.cpp.s
+.PHONY : drivers/interfaces/mks_can/mks_axis_configurator.s
 
 # target to generate assembly for a file
-drivers/interfaces/mks_can/adapter/mks_runtime_factory.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\mks_can_cli.dir\build.make CMakeFiles/mks_can_cli.dir/drivers/interfaces/mks_can/adapter/mks_runtime_factory.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/adapter/mks_runtime_factory.cpp.s
-.PHONY : drivers/interfaces/mks_can/adapter/mks_runtime_factory.cpp.s
+drivers/interfaces/mks_can/mks_axis_configurator.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/mks_axis_configurator.cpp.s
+.PHONY : drivers/interfaces/mks_can/mks_axis_configurator.cpp.s
 
-drivers/interfaces/mks_can/axis/mks_axis_configurator.obj: drivers/interfaces/mks_can/axis/mks_axis_configurator.cpp.obj
-.PHONY : drivers/interfaces/mks_can/axis/mks_axis_configurator.obj
+drivers/interfaces/mks_can/mks_axis_worker.obj: drivers/interfaces/mks_can/mks_axis_worker.cpp.obj
+.PHONY : drivers/interfaces/mks_can/mks_axis_worker.obj
 
 # target to build an object file
-drivers/interfaces/mks_can/axis/mks_axis_configurator.cpp.obj:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\mks_can_cli.dir\build.make CMakeFiles/mks_can_cli.dir/drivers/interfaces/mks_can/axis/mks_axis_configurator.cpp.obj
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/axis/mks_axis_configurator.cpp.obj
-.PHONY : drivers/interfaces/mks_can/axis/mks_axis_configurator.cpp.obj
+drivers/interfaces/mks_can/mks_axis_worker.cpp.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/mks_axis_worker.cpp.obj
+.PHONY : drivers/interfaces/mks_can/mks_axis_worker.cpp.obj
 
-drivers/interfaces/mks_can/axis/mks_axis_configurator.i: drivers/interfaces/mks_can/axis/mks_axis_configurator.cpp.i
-.PHONY : drivers/interfaces/mks_can/axis/mks_axis_configurator.i
+drivers/interfaces/mks_can/mks_axis_worker.i: drivers/interfaces/mks_can/mks_axis_worker.cpp.i
+.PHONY : drivers/interfaces/mks_can/mks_axis_worker.i
 
 # target to preprocess a source file
-drivers/interfaces/mks_can/axis/mks_axis_configurator.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\mks_can_cli.dir\build.make CMakeFiles/mks_can_cli.dir/drivers/interfaces/mks_can/axis/mks_axis_configurator.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/axis/mks_axis_configurator.cpp.i
-.PHONY : drivers/interfaces/mks_can/axis/mks_axis_configurator.cpp.i
+drivers/interfaces/mks_can/mks_axis_worker.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/mks_axis_worker.cpp.i
+.PHONY : drivers/interfaces/mks_can/mks_axis_worker.cpp.i
 
-drivers/interfaces/mks_can/axis/mks_axis_configurator.s: drivers/interfaces/mks_can/axis/mks_axis_configurator.cpp.s
-.PHONY : drivers/interfaces/mks_can/axis/mks_axis_configurator.s
+drivers/interfaces/mks_can/mks_axis_worker.s: drivers/interfaces/mks_can/mks_axis_worker.cpp.s
+.PHONY : drivers/interfaces/mks_can/mks_axis_worker.s
 
 # target to generate assembly for a file
-drivers/interfaces/mks_can/axis/mks_axis_configurator.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\mks_can_cli.dir\build.make CMakeFiles/mks_can_cli.dir/drivers/interfaces/mks_can/axis/mks_axis_configurator.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/axis/mks_axis_configurator.cpp.s
-.PHONY : drivers/interfaces/mks_can/axis/mks_axis_configurator.cpp.s
+drivers/interfaces/mks_can/mks_axis_worker.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/mks_axis_worker.cpp.s
+.PHONY : drivers/interfaces/mks_can/mks_axis_worker.cpp.s
 
-drivers/interfaces/mks_can/axis/mks_axis_worker.obj: drivers/interfaces/mks_can/axis/mks_axis_worker.cpp.obj
-.PHONY : drivers/interfaces/mks_can/axis/mks_axis_worker.obj
+drivers/interfaces/mks_can/mks_can_bus_manager.obj: drivers/interfaces/mks_can/mks_can_bus_manager.cpp.obj
+.PHONY : drivers/interfaces/mks_can/mks_can_bus_manager.obj
 
 # target to build an object file
-drivers/interfaces/mks_can/axis/mks_axis_worker.cpp.obj:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\mks_can_cli.dir\build.make CMakeFiles/mks_can_cli.dir/drivers/interfaces/mks_can/axis/mks_axis_worker.cpp.obj
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/axis/mks_axis_worker.cpp.obj
-.PHONY : drivers/interfaces/mks_can/axis/mks_axis_worker.cpp.obj
+drivers/interfaces/mks_can/mks_can_bus_manager.cpp.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/mks_can_bus_manager.cpp.obj
+.PHONY : drivers/interfaces/mks_can/mks_can_bus_manager.cpp.obj
 
-drivers/interfaces/mks_can/axis/mks_axis_worker.i: drivers/interfaces/mks_can/axis/mks_axis_worker.cpp.i
-.PHONY : drivers/interfaces/mks_can/axis/mks_axis_worker.i
+drivers/interfaces/mks_can/mks_can_bus_manager.i: drivers/interfaces/mks_can/mks_can_bus_manager.cpp.i
+.PHONY : drivers/interfaces/mks_can/mks_can_bus_manager.i
 
 # target to preprocess a source file
-drivers/interfaces/mks_can/axis/mks_axis_worker.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\mks_can_cli.dir\build.make CMakeFiles/mks_can_cli.dir/drivers/interfaces/mks_can/axis/mks_axis_worker.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/axis/mks_axis_worker.cpp.i
-.PHONY : drivers/interfaces/mks_can/axis/mks_axis_worker.cpp.i
+drivers/interfaces/mks_can/mks_can_bus_manager.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/mks_can_bus_manager.cpp.i
+.PHONY : drivers/interfaces/mks_can/mks_can_bus_manager.cpp.i
 
-drivers/interfaces/mks_can/axis/mks_axis_worker.s: drivers/interfaces/mks_can/axis/mks_axis_worker.cpp.s
-.PHONY : drivers/interfaces/mks_can/axis/mks_axis_worker.s
+drivers/interfaces/mks_can/mks_can_bus_manager.s: drivers/interfaces/mks_can/mks_can_bus_manager.cpp.s
+.PHONY : drivers/interfaces/mks_can/mks_can_bus_manager.s
 
 # target to generate assembly for a file
-drivers/interfaces/mks_can/axis/mks_axis_worker.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\mks_can_cli.dir\build.make CMakeFiles/mks_can_cli.dir/drivers/interfaces/mks_can/axis/mks_axis_worker.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/axis/mks_axis_worker.cpp.s
-.PHONY : drivers/interfaces/mks_can/axis/mks_axis_worker.cpp.s
+drivers/interfaces/mks_can/mks_can_bus_manager.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/mks_can_bus_manager.cpp.s
+.PHONY : drivers/interfaces/mks_can/mks_can_bus_manager.cpp.s
 
-drivers/interfaces/mks_can/axis/mks_homing_state_machine.obj: drivers/interfaces/mks_can/axis/mks_homing_state_machine.cpp.obj
-.PHONY : drivers/interfaces/mks_can/axis/mks_homing_state_machine.obj
+drivers/interfaces/mks_can/mks_dictionary.obj: drivers/interfaces/mks_can/mks_dictionary.cpp.obj
+.PHONY : drivers/interfaces/mks_can/mks_dictionary.obj
 
 # target to build an object file
-drivers/interfaces/mks_can/axis/mks_homing_state_machine.cpp.obj:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\mks_can_cli.dir\build.make CMakeFiles/mks_can_cli.dir/drivers/interfaces/mks_can/axis/mks_homing_state_machine.cpp.obj
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/axis/mks_homing_state_machine.cpp.obj
-.PHONY : drivers/interfaces/mks_can/axis/mks_homing_state_machine.cpp.obj
+drivers/interfaces/mks_can/mks_dictionary.cpp.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/mks_dictionary.cpp.obj
+.PHONY : drivers/interfaces/mks_can/mks_dictionary.cpp.obj
 
-drivers/interfaces/mks_can/axis/mks_homing_state_machine.i: drivers/interfaces/mks_can/axis/mks_homing_state_machine.cpp.i
-.PHONY : drivers/interfaces/mks_can/axis/mks_homing_state_machine.i
+drivers/interfaces/mks_can/mks_dictionary.i: drivers/interfaces/mks_can/mks_dictionary.cpp.i
+.PHONY : drivers/interfaces/mks_can/mks_dictionary.i
 
 # target to preprocess a source file
-drivers/interfaces/mks_can/axis/mks_homing_state_machine.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\mks_can_cli.dir\build.make CMakeFiles/mks_can_cli.dir/drivers/interfaces/mks_can/axis/mks_homing_state_machine.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/axis/mks_homing_state_machine.cpp.i
-.PHONY : drivers/interfaces/mks_can/axis/mks_homing_state_machine.cpp.i
+drivers/interfaces/mks_can/mks_dictionary.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/mks_dictionary.cpp.i
+.PHONY : drivers/interfaces/mks_can/mks_dictionary.cpp.i
 
-drivers/interfaces/mks_can/axis/mks_homing_state_machine.s: drivers/interfaces/mks_can/axis/mks_homing_state_machine.cpp.s
-.PHONY : drivers/interfaces/mks_can/axis/mks_homing_state_machine.s
+drivers/interfaces/mks_can/mks_dictionary.s: drivers/interfaces/mks_can/mks_dictionary.cpp.s
+.PHONY : drivers/interfaces/mks_can/mks_dictionary.s
 
 # target to generate assembly for a file
-drivers/interfaces/mks_can/axis/mks_homing_state_machine.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\mks_can_cli.dir\build.make CMakeFiles/mks_can_cli.dir/drivers/interfaces/mks_can/axis/mks_homing_state_machine.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/axis/mks_homing_state_machine.cpp.s
-.PHONY : drivers/interfaces/mks_can/axis/mks_homing_state_machine.cpp.s
+drivers/interfaces/mks_can/mks_dictionary.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/mks_dictionary.cpp.s
+.PHONY : drivers/interfaces/mks_can/mks_dictionary.cpp.s
 
-drivers/interfaces/mks_can/dictionary/mks_dictionary.obj: drivers/interfaces/mks_can/dictionary/mks_dictionary.cpp.obj
-.PHONY : drivers/interfaces/mks_can/dictionary/mks_dictionary.obj
+drivers/interfaces/mks_can/mks_homing_state_machine.obj: drivers/interfaces/mks_can/mks_homing_state_machine.cpp.obj
+.PHONY : drivers/interfaces/mks_can/mks_homing_state_machine.obj
 
 # target to build an object file
-drivers/interfaces/mks_can/dictionary/mks_dictionary.cpp.obj:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\mks_can_cli.dir\build.make CMakeFiles/mks_can_cli.dir/drivers/interfaces/mks_can/dictionary/mks_dictionary.cpp.obj
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/dictionary/mks_dictionary.cpp.obj
-.PHONY : drivers/interfaces/mks_can/dictionary/mks_dictionary.cpp.obj
+drivers/interfaces/mks_can/mks_homing_state_machine.cpp.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/mks_homing_state_machine.cpp.obj
+.PHONY : drivers/interfaces/mks_can/mks_homing_state_machine.cpp.obj
 
-drivers/interfaces/mks_can/dictionary/mks_dictionary.i: drivers/interfaces/mks_can/dictionary/mks_dictionary.cpp.i
-.PHONY : drivers/interfaces/mks_can/dictionary/mks_dictionary.i
+drivers/interfaces/mks_can/mks_homing_state_machine.i: drivers/interfaces/mks_can/mks_homing_state_machine.cpp.i
+.PHONY : drivers/interfaces/mks_can/mks_homing_state_machine.i
 
 # target to preprocess a source file
-drivers/interfaces/mks_can/dictionary/mks_dictionary.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\mks_can_cli.dir\build.make CMakeFiles/mks_can_cli.dir/drivers/interfaces/mks_can/dictionary/mks_dictionary.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/dictionary/mks_dictionary.cpp.i
-.PHONY : drivers/interfaces/mks_can/dictionary/mks_dictionary.cpp.i
+drivers/interfaces/mks_can/mks_homing_state_machine.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/mks_homing_state_machine.cpp.i
+.PHONY : drivers/interfaces/mks_can/mks_homing_state_machine.cpp.i
 
-drivers/interfaces/mks_can/dictionary/mks_dictionary.s: drivers/interfaces/mks_can/dictionary/mks_dictionary.cpp.s
-.PHONY : drivers/interfaces/mks_can/dictionary/mks_dictionary.s
+drivers/interfaces/mks_can/mks_homing_state_machine.s: drivers/interfaces/mks_can/mks_homing_state_machine.cpp.s
+.PHONY : drivers/interfaces/mks_can/mks_homing_state_machine.s
 
 # target to generate assembly for a file
-drivers/interfaces/mks_can/dictionary/mks_dictionary.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\mks_can_cli.dir\build.make CMakeFiles/mks_can_cli.dir/drivers/interfaces/mks_can/dictionary/mks_dictionary.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/dictionary/mks_dictionary.cpp.s
-.PHONY : drivers/interfaces/mks_can/dictionary/mks_dictionary.cpp.s
+drivers/interfaces/mks_can/mks_homing_state_machine.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/mks_homing_state_machine.cpp.s
+.PHONY : drivers/interfaces/mks_can/mks_homing_state_machine.cpp.s
 
-drivers/interfaces/mks_can/internal/port/gs_usb_can_port.obj: drivers/interfaces/mks_can/internal/port/gs_usb_can_port.cpp.obj
-.PHONY : drivers/interfaces/mks_can/internal/port/gs_usb_can_port.obj
+drivers/interfaces/mks_can/mks_protocol.obj: drivers/interfaces/mks_can/mks_protocol.cpp.obj
+.PHONY : drivers/interfaces/mks_can/mks_protocol.obj
 
 # target to build an object file
-drivers/interfaces/mks_can/internal/port/gs_usb_can_port.cpp.obj:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\mks_can_cli.dir\build.make CMakeFiles/mks_can_cli.dir/drivers/interfaces/mks_can/internal/port/gs_usb_can_port.cpp.obj
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/internal/port/gs_usb_can_port.cpp.obj
-.PHONY : drivers/interfaces/mks_can/internal/port/gs_usb_can_port.cpp.obj
+drivers/interfaces/mks_can/mks_protocol.cpp.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/mks_protocol.cpp.obj
+.PHONY : drivers/interfaces/mks_can/mks_protocol.cpp.obj
 
-drivers/interfaces/mks_can/internal/port/gs_usb_can_port.i: drivers/interfaces/mks_can/internal/port/gs_usb_can_port.cpp.i
-.PHONY : drivers/interfaces/mks_can/internal/port/gs_usb_can_port.i
+drivers/interfaces/mks_can/mks_protocol.i: drivers/interfaces/mks_can/mks_protocol.cpp.i
+.PHONY : drivers/interfaces/mks_can/mks_protocol.i
 
 # target to preprocess a source file
-drivers/interfaces/mks_can/internal/port/gs_usb_can_port.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\mks_can_cli.dir\build.make CMakeFiles/mks_can_cli.dir/drivers/interfaces/mks_can/internal/port/gs_usb_can_port.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/internal/port/gs_usb_can_port.cpp.i
-.PHONY : drivers/interfaces/mks_can/internal/port/gs_usb_can_port.cpp.i
+drivers/interfaces/mks_can/mks_protocol.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/mks_protocol.cpp.i
+.PHONY : drivers/interfaces/mks_can/mks_protocol.cpp.i
 
-drivers/interfaces/mks_can/internal/port/gs_usb_can_port.s: drivers/interfaces/mks_can/internal/port/gs_usb_can_port.cpp.s
-.PHONY : drivers/interfaces/mks_can/internal/port/gs_usb_can_port.s
+drivers/interfaces/mks_can/mks_protocol.s: drivers/interfaces/mks_can/mks_protocol.cpp.s
+.PHONY : drivers/interfaces/mks_can/mks_protocol.s
 
 # target to generate assembly for a file
-drivers/interfaces/mks_can/internal/port/gs_usb_can_port.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\mks_can_cli.dir\build.make CMakeFiles/mks_can_cli.dir/drivers/interfaces/mks_can/internal/port/gs_usb_can_port.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/internal/port/gs_usb_can_port.cpp.s
-.PHONY : drivers/interfaces/mks_can/internal/port/gs_usb_can_port.cpp.s
+drivers/interfaces/mks_can/mks_protocol.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/mks_protocol.cpp.s
+.PHONY : drivers/interfaces/mks_can/mks_protocol.cpp.s
 
-drivers/interfaces/mks_can/internal/port/sim_can_port.obj: drivers/interfaces/mks_can/internal/port/sim_can_port.cpp.obj
-.PHONY : drivers/interfaces/mks_can/internal/port/sim_can_port.obj
+drivers/interfaces/mks_can/mks_runtime_config.obj: drivers/interfaces/mks_can/mks_runtime_config.cpp.obj
+.PHONY : drivers/interfaces/mks_can/mks_runtime_config.obj
 
 # target to build an object file
-drivers/interfaces/mks_can/internal/port/sim_can_port.cpp.obj:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\mks_can_cli.dir\build.make CMakeFiles/mks_can_cli.dir/drivers/interfaces/mks_can/internal/port/sim_can_port.cpp.obj
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/internal/port/sim_can_port.cpp.obj
-.PHONY : drivers/interfaces/mks_can/internal/port/sim_can_port.cpp.obj
+drivers/interfaces/mks_can/mks_runtime_config.cpp.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/mks_runtime_config.cpp.obj
+.PHONY : drivers/interfaces/mks_can/mks_runtime_config.cpp.obj
 
-drivers/interfaces/mks_can/internal/port/sim_can_port.i: drivers/interfaces/mks_can/internal/port/sim_can_port.cpp.i
-.PHONY : drivers/interfaces/mks_can/internal/port/sim_can_port.i
+drivers/interfaces/mks_can/mks_runtime_config.i: drivers/interfaces/mks_can/mks_runtime_config.cpp.i
+.PHONY : drivers/interfaces/mks_can/mks_runtime_config.i
 
 # target to preprocess a source file
-drivers/interfaces/mks_can/internal/port/sim_can_port.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\mks_can_cli.dir\build.make CMakeFiles/mks_can_cli.dir/drivers/interfaces/mks_can/internal/port/sim_can_port.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/internal/port/sim_can_port.cpp.i
-.PHONY : drivers/interfaces/mks_can/internal/port/sim_can_port.cpp.i
+drivers/interfaces/mks_can/mks_runtime_config.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/mks_runtime_config.cpp.i
+.PHONY : drivers/interfaces/mks_can/mks_runtime_config.cpp.i
 
-drivers/interfaces/mks_can/internal/port/sim_can_port.s: drivers/interfaces/mks_can/internal/port/sim_can_port.cpp.s
-.PHONY : drivers/interfaces/mks_can/internal/port/sim_can_port.s
+drivers/interfaces/mks_can/mks_runtime_config.s: drivers/interfaces/mks_can/mks_runtime_config.cpp.s
+.PHONY : drivers/interfaces/mks_can/mks_runtime_config.s
 
 # target to generate assembly for a file
-drivers/interfaces/mks_can/internal/port/sim_can_port.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\mks_can_cli.dir\build.make CMakeFiles/mks_can_cli.dir/drivers/interfaces/mks_can/internal/port/sim_can_port.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/internal/port/sim_can_port.cpp.s
-.PHONY : drivers/interfaces/mks_can/internal/port/sim_can_port.cpp.s
+drivers/interfaces/mks_can/mks_runtime_config.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/mks_runtime_config.cpp.s
+.PHONY : drivers/interfaces/mks_can/mks_runtime_config.cpp.s
 
-drivers/interfaces/mks_can/internal/protocol/mks_protocol.obj: drivers/interfaces/mks_can/internal/protocol/mks_protocol.cpp.obj
-.PHONY : drivers/interfaces/mks_can/internal/protocol/mks_protocol.obj
+drivers/interfaces/mks_can/mks_runtime_factory.obj: drivers/interfaces/mks_can/mks_runtime_factory.cpp.obj
+.PHONY : drivers/interfaces/mks_can/mks_runtime_factory.obj
 
 # target to build an object file
-drivers/interfaces/mks_can/internal/protocol/mks_protocol.cpp.obj:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\mks_can_cli.dir\build.make CMakeFiles/mks_can_cli.dir/drivers/interfaces/mks_can/internal/protocol/mks_protocol.cpp.obj
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/internal/protocol/mks_protocol.cpp.obj
-.PHONY : drivers/interfaces/mks_can/internal/protocol/mks_protocol.cpp.obj
+drivers/interfaces/mks_can/mks_runtime_factory.cpp.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/mks_runtime_factory.cpp.obj
+.PHONY : drivers/interfaces/mks_can/mks_runtime_factory.cpp.obj
 
-drivers/interfaces/mks_can/internal/protocol/mks_protocol.i: drivers/interfaces/mks_can/internal/protocol/mks_protocol.cpp.i
-.PHONY : drivers/interfaces/mks_can/internal/protocol/mks_protocol.i
+drivers/interfaces/mks_can/mks_runtime_factory.i: drivers/interfaces/mks_can/mks_runtime_factory.cpp.i
+.PHONY : drivers/interfaces/mks_can/mks_runtime_factory.i
 
 # target to preprocess a source file
-drivers/interfaces/mks_can/internal/protocol/mks_protocol.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\mks_can_cli.dir\build.make CMakeFiles/mks_can_cli.dir/drivers/interfaces/mks_can/internal/protocol/mks_protocol.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/internal/protocol/mks_protocol.cpp.i
-.PHONY : drivers/interfaces/mks_can/internal/protocol/mks_protocol.cpp.i
+drivers/interfaces/mks_can/mks_runtime_factory.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/mks_runtime_factory.cpp.i
+.PHONY : drivers/interfaces/mks_can/mks_runtime_factory.cpp.i
 
-drivers/interfaces/mks_can/internal/protocol/mks_protocol.s: drivers/interfaces/mks_can/internal/protocol/mks_protocol.cpp.s
-.PHONY : drivers/interfaces/mks_can/internal/protocol/mks_protocol.s
+drivers/interfaces/mks_can/mks_runtime_factory.s: drivers/interfaces/mks_can/mks_runtime_factory.cpp.s
+.PHONY : drivers/interfaces/mks_can/mks_runtime_factory.s
 
 # target to generate assembly for a file
-drivers/interfaces/mks_can/internal/protocol/mks_protocol.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\mks_can_cli.dir\build.make CMakeFiles/mks_can_cli.dir/drivers/interfaces/mks_can/internal/protocol/mks_protocol.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/internal/protocol/mks_protocol.cpp.s
-.PHONY : drivers/interfaces/mks_can/internal/protocol/mks_protocol.cpp.s
+drivers/interfaces/mks_can/mks_runtime_factory.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/mks_runtime_factory.cpp.s
+.PHONY : drivers/interfaces/mks_can/mks_runtime_factory.cpp.s
 
-drivers/interfaces/mks_can/manager/mks_can_bus_manager.obj: drivers/interfaces/mks_can/manager/mks_can_bus_manager.cpp.obj
-.PHONY : drivers/interfaces/mks_can/manager/mks_can_bus_manager.obj
+drivers/interfaces/mks_can/mks_topology_scanner.obj: drivers/interfaces/mks_can/mks_topology_scanner.cpp.obj
+.PHONY : drivers/interfaces/mks_can/mks_topology_scanner.obj
 
 # target to build an object file
-drivers/interfaces/mks_can/manager/mks_can_bus_manager.cpp.obj:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\mks_can_cli.dir\build.make CMakeFiles/mks_can_cli.dir/drivers/interfaces/mks_can/manager/mks_can_bus_manager.cpp.obj
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/manager/mks_can_bus_manager.cpp.obj
-.PHONY : drivers/interfaces/mks_can/manager/mks_can_bus_manager.cpp.obj
+drivers/interfaces/mks_can/mks_topology_scanner.cpp.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/mks_topology_scanner.cpp.obj
+.PHONY : drivers/interfaces/mks_can/mks_topology_scanner.cpp.obj
 
-drivers/interfaces/mks_can/manager/mks_can_bus_manager.i: drivers/interfaces/mks_can/manager/mks_can_bus_manager.cpp.i
-.PHONY : drivers/interfaces/mks_can/manager/mks_can_bus_manager.i
+drivers/interfaces/mks_can/mks_topology_scanner.i: drivers/interfaces/mks_can/mks_topology_scanner.cpp.i
+.PHONY : drivers/interfaces/mks_can/mks_topology_scanner.i
 
 # target to preprocess a source file
-drivers/interfaces/mks_can/manager/mks_can_bus_manager.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\mks_can_cli.dir\build.make CMakeFiles/mks_can_cli.dir/drivers/interfaces/mks_can/manager/mks_can_bus_manager.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/manager/mks_can_bus_manager.cpp.i
-.PHONY : drivers/interfaces/mks_can/manager/mks_can_bus_manager.cpp.i
+drivers/interfaces/mks_can/mks_topology_scanner.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/mks_topology_scanner.cpp.i
+.PHONY : drivers/interfaces/mks_can/mks_topology_scanner.cpp.i
 
-drivers/interfaces/mks_can/manager/mks_can_bus_manager.s: drivers/interfaces/mks_can/manager/mks_can_bus_manager.cpp.s
-.PHONY : drivers/interfaces/mks_can/manager/mks_can_bus_manager.s
+drivers/interfaces/mks_can/mks_topology_scanner.s: drivers/interfaces/mks_can/mks_topology_scanner.cpp.s
+.PHONY : drivers/interfaces/mks_can/mks_topology_scanner.s
 
 # target to generate assembly for a file
-drivers/interfaces/mks_can/manager/mks_can_bus_manager.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\mks_can_cli.dir\build.make CMakeFiles/mks_can_cli.dir/drivers/interfaces/mks_can/manager/mks_can_bus_manager.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/manager/mks_can_bus_manager.cpp.s
-.PHONY : drivers/interfaces/mks_can/manager/mks_can_bus_manager.cpp.s
+drivers/interfaces/mks_can/mks_topology_scanner.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/mks_topology_scanner.cpp.s
+.PHONY : drivers/interfaces/mks_can/mks_topology_scanner.cpp.s
 
-drivers/interfaces/mks_can/manager/mks_topology_scanner.obj: drivers/interfaces/mks_can/manager/mks_topology_scanner.cpp.obj
-.PHONY : drivers/interfaces/mks_can/manager/mks_topology_scanner.obj
+drivers/interfaces/mks_can/sim_can_port.obj: drivers/interfaces/mks_can/sim_can_port.cpp.obj
+.PHONY : drivers/interfaces/mks_can/sim_can_port.obj
 
 # target to build an object file
-drivers/interfaces/mks_can/manager/mks_topology_scanner.cpp.obj:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\mks_can_cli.dir\build.make CMakeFiles/mks_can_cli.dir/drivers/interfaces/mks_can/manager/mks_topology_scanner.cpp.obj
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/manager/mks_topology_scanner.cpp.obj
-.PHONY : drivers/interfaces/mks_can/manager/mks_topology_scanner.cpp.obj
+drivers/interfaces/mks_can/sim_can_port.cpp.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/sim_can_port.cpp.obj
+.PHONY : drivers/interfaces/mks_can/sim_can_port.cpp.obj
 
-drivers/interfaces/mks_can/manager/mks_topology_scanner.i: drivers/interfaces/mks_can/manager/mks_topology_scanner.cpp.i
-.PHONY : drivers/interfaces/mks_can/manager/mks_topology_scanner.i
+drivers/interfaces/mks_can/sim_can_port.i: drivers/interfaces/mks_can/sim_can_port.cpp.i
+.PHONY : drivers/interfaces/mks_can/sim_can_port.i
 
 # target to preprocess a source file
-drivers/interfaces/mks_can/manager/mks_topology_scanner.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\mks_can_cli.dir\build.make CMakeFiles/mks_can_cli.dir/drivers/interfaces/mks_can/manager/mks_topology_scanner.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/manager/mks_topology_scanner.cpp.i
-.PHONY : drivers/interfaces/mks_can/manager/mks_topology_scanner.cpp.i
+drivers/interfaces/mks_can/sim_can_port.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/sim_can_port.cpp.i
+.PHONY : drivers/interfaces/mks_can/sim_can_port.cpp.i
 
-drivers/interfaces/mks_can/manager/mks_topology_scanner.s: drivers/interfaces/mks_can/manager/mks_topology_scanner.cpp.s
-.PHONY : drivers/interfaces/mks_can/manager/mks_topology_scanner.s
+drivers/interfaces/mks_can/sim_can_port.s: drivers/interfaces/mks_can/sim_can_port.cpp.s
+.PHONY : drivers/interfaces/mks_can/sim_can_port.s
 
 # target to generate assembly for a file
-drivers/interfaces/mks_can/manager/mks_topology_scanner.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\mks_can_cli.dir\build.make CMakeFiles/mks_can_cli.dir/drivers/interfaces/mks_can/manager/mks_topology_scanner.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/manager/mks_topology_scanner.cpp.s
-.PHONY : drivers/interfaces/mks_can/manager/mks_topology_scanner.cpp.s
+drivers/interfaces/mks_can/sim_can_port.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/drivers/interfaces/mks_can/sim_can_port.cpp.s
+.PHONY : drivers/interfaces/mks_can/sim_can_port.cpp.s
 
-hal_ipc/src/client.obj: hal_ipc/src/client.cpp.obj
-.PHONY : hal_ipc/src/client.obj
+hal_host_service/hal_host_service.obj: hal_host_service/hal_host_service.cpp.obj
+.PHONY : hal_host_service/hal_host_service.obj
 
 # target to build an object file
-hal_ipc/src/client.cpp.obj:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\hal_ipc.dir\build.make CMakeFiles/hal_ipc.dir/hal_ipc/src/client.cpp.obj
-.PHONY : hal_ipc/src/client.cpp.obj
+hal_host_service/hal_host_service.cpp.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\hal_host_service.dir\build.make CMakeFiles/hal_host_service.dir/hal_host_service/hal_host_service.cpp.obj
+.PHONY : hal_host_service/hal_host_service.cpp.obj
 
-hal_ipc/src/client.i: hal_ipc/src/client.cpp.i
-.PHONY : hal_ipc/src/client.i
+hal_host_service/hal_host_service.i: hal_host_service/hal_host_service.cpp.i
+.PHONY : hal_host_service/hal_host_service.i
 
 # target to preprocess a source file
-hal_ipc/src/client.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\hal_ipc.dir\build.make CMakeFiles/hal_ipc.dir/hal_ipc/src/client.cpp.i
-.PHONY : hal_ipc/src/client.cpp.i
+hal_host_service/hal_host_service.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\hal_host_service.dir\build.make CMakeFiles/hal_host_service.dir/hal_host_service/hal_host_service.cpp.i
+.PHONY : hal_host_service/hal_host_service.cpp.i
 
-hal_ipc/src/client.s: hal_ipc/src/client.cpp.s
-.PHONY : hal_ipc/src/client.s
+hal_host_service/hal_host_service.s: hal_host_service/hal_host_service.cpp.s
+.PHONY : hal_host_service/hal_host_service.s
 
 # target to generate assembly for a file
-hal_ipc/src/client.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\hal_ipc.dir\build.make CMakeFiles/hal_ipc.dir/hal_ipc/src/client.cpp.s
-.PHONY : hal_ipc/src/client.cpp.s
+hal_host_service/hal_host_service.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\hal_host_service.dir\build.make CMakeFiles/hal_host_service.dir/hal_host_service/hal_host_service.cpp.s
+.PHONY : hal_host_service/hal_host_service.cpp.s
 
-hal_ipc/src/protocol.obj: hal_ipc/src/protocol.cpp.obj
-.PHONY : hal_ipc/src/protocol.obj
+hal_host_service_autogen/mocs_compilation.obj: hal_host_service_autogen/mocs_compilation.cpp.obj
+.PHONY : hal_host_service_autogen/mocs_compilation.obj
 
 # target to build an object file
-hal_ipc/src/protocol.cpp.obj:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\hal_ipc.dir\build.make CMakeFiles/hal_ipc.dir/hal_ipc/src/protocol.cpp.obj
-.PHONY : hal_ipc/src/protocol.cpp.obj
+hal_host_service_autogen/mocs_compilation.cpp.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\hal_host_service.dir\build.make CMakeFiles/hal_host_service.dir/hal_host_service_autogen/mocs_compilation.cpp.obj
+.PHONY : hal_host_service_autogen/mocs_compilation.cpp.obj
 
-hal_ipc/src/protocol.i: hal_ipc/src/protocol.cpp.i
-.PHONY : hal_ipc/src/protocol.i
+hal_host_service_autogen/mocs_compilation.i: hal_host_service_autogen/mocs_compilation.cpp.i
+.PHONY : hal_host_service_autogen/mocs_compilation.i
 
 # target to preprocess a source file
-hal_ipc/src/protocol.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\hal_ipc.dir\build.make CMakeFiles/hal_ipc.dir/hal_ipc/src/protocol.cpp.i
-.PHONY : hal_ipc/src/protocol.cpp.i
+hal_host_service_autogen/mocs_compilation.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\hal_host_service.dir\build.make CMakeFiles/hal_host_service.dir/hal_host_service_autogen/mocs_compilation.cpp.i
+.PHONY : hal_host_service_autogen/mocs_compilation.cpp.i
 
-hal_ipc/src/protocol.s: hal_ipc/src/protocol.cpp.s
-.PHONY : hal_ipc/src/protocol.s
+hal_host_service_autogen/mocs_compilation.s: hal_host_service_autogen/mocs_compilation.cpp.s
+.PHONY : hal_host_service_autogen/mocs_compilation.s
 
 # target to generate assembly for a file
-hal_ipc/src/protocol.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\hal_ipc.dir\build.make CMakeFiles/hal_ipc.dir/hal_ipc/src/protocol.cpp.s
-.PHONY : hal_ipc/src/protocol.cpp.s
+hal_host_service_autogen/mocs_compilation.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\hal_host_service.dir\build.make CMakeFiles/hal_host_service.dir/hal_host_service_autogen/mocs_compilation.cpp.s
+.PHONY : hal_host_service_autogen/mocs_compilation.cpp.s
 
-hal_ipc/src/server.obj: hal_ipc/src/server.cpp.obj
-.PHONY : hal_ipc/src/server.obj
+hal_ipc/client/client.obj: hal_ipc/client/client.cpp.obj
+.PHONY : hal_ipc/client/client.obj
 
 # target to build an object file
-hal_ipc/src/server.cpp.obj:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\hal_ipc.dir\build.make CMakeFiles/hal_ipc.dir/hal_ipc/src/server.cpp.obj
-.PHONY : hal_ipc/src/server.cpp.obj
+hal_ipc/client/client.cpp.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\hal_ipc.dir\build.make CMakeFiles/hal_ipc.dir/hal_ipc/client/client.cpp.obj
+.PHONY : hal_ipc/client/client.cpp.obj
 
-hal_ipc/src/server.i: hal_ipc/src/server.cpp.i
-.PHONY : hal_ipc/src/server.i
+hal_ipc/client/client.i: hal_ipc/client/client.cpp.i
+.PHONY : hal_ipc/client/client.i
 
 # target to preprocess a source file
-hal_ipc/src/server.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\hal_ipc.dir\build.make CMakeFiles/hal_ipc.dir/hal_ipc/src/server.cpp.i
-.PHONY : hal_ipc/src/server.cpp.i
+hal_ipc/client/client.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\hal_ipc.dir\build.make CMakeFiles/hal_ipc.dir/hal_ipc/client/client.cpp.i
+.PHONY : hal_ipc/client/client.cpp.i
 
-hal_ipc/src/server.s: hal_ipc/src/server.cpp.s
-.PHONY : hal_ipc/src/server.s
+hal_ipc/client/client.s: hal_ipc/client/client.cpp.s
+.PHONY : hal_ipc/client/client.s
 
 # target to generate assembly for a file
-hal_ipc/src/server.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\hal_ipc.dir\build.make CMakeFiles/hal_ipc.dir/hal_ipc/src/server.cpp.s
-.PHONY : hal_ipc/src/server.cpp.s
+hal_ipc/client/client.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\hal_ipc.dir\build.make CMakeFiles/hal_ipc.dir/hal_ipc/client/client.cpp.s
+.PHONY : hal_ipc/client/client.cpp.s
+
+hal_ipc/ipc_controller/ipc_controller.obj: hal_ipc/ipc_controller/ipc_controller.cpp.obj
+.PHONY : hal_ipc/ipc_controller/ipc_controller.obj
+
+# target to build an object file
+hal_ipc/ipc_controller/ipc_controller.cpp.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\hal_ipc.dir\build.make CMakeFiles/hal_ipc.dir/hal_ipc/ipc_controller/ipc_controller.cpp.obj
+.PHONY : hal_ipc/ipc_controller/ipc_controller.cpp.obj
+
+hal_ipc/ipc_controller/ipc_controller.i: hal_ipc/ipc_controller/ipc_controller.cpp.i
+.PHONY : hal_ipc/ipc_controller/ipc_controller.i
+
+# target to preprocess a source file
+hal_ipc/ipc_controller/ipc_controller.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\hal_ipc.dir\build.make CMakeFiles/hal_ipc.dir/hal_ipc/ipc_controller/ipc_controller.cpp.i
+.PHONY : hal_ipc/ipc_controller/ipc_controller.cpp.i
+
+hal_ipc/ipc_controller/ipc_controller.s: hal_ipc/ipc_controller/ipc_controller.cpp.s
+.PHONY : hal_ipc/ipc_controller/ipc_controller.s
+
+# target to generate assembly for a file
+hal_ipc/ipc_controller/ipc_controller.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\hal_ipc.dir\build.make CMakeFiles/hal_ipc.dir/hal_ipc/ipc_controller/ipc_controller.cpp.s
+.PHONY : hal_ipc/ipc_controller/ipc_controller.cpp.s
+
+hal_ipc/protocol/protocol.obj: hal_ipc/protocol/protocol.cpp.obj
+.PHONY : hal_ipc/protocol/protocol.obj
+
+# target to build an object file
+hal_ipc/protocol/protocol.cpp.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\hal_ipc.dir\build.make CMakeFiles/hal_ipc.dir/hal_ipc/protocol/protocol.cpp.obj
+.PHONY : hal_ipc/protocol/protocol.cpp.obj
+
+hal_ipc/protocol/protocol.i: hal_ipc/protocol/protocol.cpp.i
+.PHONY : hal_ipc/protocol/protocol.i
+
+# target to preprocess a source file
+hal_ipc/protocol/protocol.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\hal_ipc.dir\build.make CMakeFiles/hal_ipc.dir/hal_ipc/protocol/protocol.cpp.i
+.PHONY : hal_ipc/protocol/protocol.cpp.i
+
+hal_ipc/protocol/protocol.s: hal_ipc/protocol/protocol.cpp.s
+.PHONY : hal_ipc/protocol/protocol.s
+
+# target to generate assembly for a file
+hal_ipc/protocol/protocol.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\hal_ipc.dir\build.make CMakeFiles/hal_ipc.dir/hal_ipc/protocol/protocol.cpp.s
+.PHONY : hal_ipc/protocol/protocol.cpp.s
+
+hal_ipc/server/server.obj: hal_ipc/server/server.cpp.obj
+.PHONY : hal_ipc/server/server.obj
+
+# target to build an object file
+hal_ipc/server/server.cpp.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\hal_ipc.dir\build.make CMakeFiles/hal_ipc.dir/hal_ipc/server/server.cpp.obj
+.PHONY : hal_ipc/server/server.cpp.obj
+
+hal_ipc/server/server.i: hal_ipc/server/server.cpp.i
+.PHONY : hal_ipc/server/server.i
+
+# target to preprocess a source file
+hal_ipc/server/server.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\hal_ipc.dir\build.make CMakeFiles/hal_ipc.dir/hal_ipc/server/server.cpp.i
+.PHONY : hal_ipc/server/server.cpp.i
+
+hal_ipc/server/server.s: hal_ipc/server/server.cpp.s
+.PHONY : hal_ipc/server/server.s
+
+# target to generate assembly for a file
+hal_ipc/server/server.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\hal_ipc.dir\build.make CMakeFiles/hal_ipc.dir/hal_ipc/server/server.cpp.s
+.PHONY : hal_ipc/server/server.cpp.s
 
 hal_ipc_autogen/mocs_compilation.obj: hal_ipc_autogen/mocs_compilation.cpp.obj
 .PHONY : hal_ipc_autogen/mocs_compilation.obj
@@ -753,30 +762,6 @@ hal_ipc_autogen/mocs_compilation.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\hal_ipc.dir\build.make CMakeFiles/hal_ipc.dir/hal_ipc_autogen/mocs_compilation.cpp.s
 .PHONY : hal_ipc_autogen/mocs_compilation.cpp.s
 
-mks_can_cli_autogen/mocs_compilation.obj: mks_can_cli_autogen/mocs_compilation.cpp.obj
-.PHONY : mks_can_cli_autogen/mocs_compilation.obj
-
-# target to build an object file
-mks_can_cli_autogen/mocs_compilation.cpp.obj:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\mks_can_cli.dir\build.make CMakeFiles/mks_can_cli.dir/mks_can_cli_autogen/mocs_compilation.cpp.obj
-.PHONY : mks_can_cli_autogen/mocs_compilation.cpp.obj
-
-mks_can_cli_autogen/mocs_compilation.i: mks_can_cli_autogen/mocs_compilation.cpp.i
-.PHONY : mks_can_cli_autogen/mocs_compilation.i
-
-# target to preprocess a source file
-mks_can_cli_autogen/mocs_compilation.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\mks_can_cli.dir\build.make CMakeFiles/mks_can_cli.dir/mks_can_cli_autogen/mocs_compilation.cpp.i
-.PHONY : mks_can_cli_autogen/mocs_compilation.cpp.i
-
-mks_can_cli_autogen/mocs_compilation.s: mks_can_cli_autogen/mocs_compilation.cpp.s
-.PHONY : mks_can_cli_autogen/mocs_compilation.s
-
-# target to generate assembly for a file
-mks_can_cli_autogen/mocs_compilation.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\mks_can_cli.dir\build.make CMakeFiles/mks_can_cli.dir/mks_can_cli_autogen/mocs_compilation.cpp.s
-.PHONY : mks_can_cli_autogen/mocs_compilation.cpp.s
-
 motor_tester_gui_autogen/mocs_compilation.obj: motor_tester_gui_autogen/mocs_compilation.cpp.obj
 .PHONY : motor_tester_gui_autogen/mocs_compilation.obj
 
@@ -801,173 +786,125 @@ motor_tester_gui_autogen/mocs_compilation.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/motor_tester_gui_autogen/mocs_compilation.cpp.s
 .PHONY : motor_tester_gui_autogen/mocs_compilation.cpp.s
 
-ui/qt/mks/ScopeWidget.obj: ui/qt/mks/ScopeWidget.cpp.obj
-.PHONY : ui/qt/mks/ScopeWidget.obj
+ui/qt/mks/axis_manager/axis_config_controller.obj: ui/qt/mks/axis_manager/axis_config_controller.cpp.obj
+.PHONY : ui/qt/mks/axis_manager/axis_config_controller.obj
 
 # target to build an object file
-ui/qt/mks/ScopeWidget.cpp.obj:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/ScopeWidget.cpp.obj
-.PHONY : ui/qt/mks/ScopeWidget.cpp.obj
+ui/qt/mks/axis_manager/axis_config_controller.cpp.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/axis_manager/axis_config_controller.cpp.obj
+.PHONY : ui/qt/mks/axis_manager/axis_config_controller.cpp.obj
 
-ui/qt/mks/ScopeWidget.i: ui/qt/mks/ScopeWidget.cpp.i
-.PHONY : ui/qt/mks/ScopeWidget.i
+ui/qt/mks/axis_manager/axis_config_controller.i: ui/qt/mks/axis_manager/axis_config_controller.cpp.i
+.PHONY : ui/qt/mks/axis_manager/axis_config_controller.i
 
 # target to preprocess a source file
-ui/qt/mks/ScopeWidget.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/ScopeWidget.cpp.i
-.PHONY : ui/qt/mks/ScopeWidget.cpp.i
+ui/qt/mks/axis_manager/axis_config_controller.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/axis_manager/axis_config_controller.cpp.i
+.PHONY : ui/qt/mks/axis_manager/axis_config_controller.cpp.i
 
-ui/qt/mks/ScopeWidget.s: ui/qt/mks/ScopeWidget.cpp.s
-.PHONY : ui/qt/mks/ScopeWidget.s
+ui/qt/mks/axis_manager/axis_config_controller.s: ui/qt/mks/axis_manager/axis_config_controller.cpp.s
+.PHONY : ui/qt/mks/axis_manager/axis_config_controller.s
 
 # target to generate assembly for a file
-ui/qt/mks/ScopeWidget.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/ScopeWidget.cpp.s
-.PHONY : ui/qt/mks/ScopeWidget.cpp.s
+ui/qt/mks/axis_manager/axis_config_controller.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/axis_manager/axis_config_controller.cpp.s
+.PHONY : ui/qt/mks/axis_manager/axis_config_controller.cpp.s
 
-ui/qt/mks/axis_manager/axis_manager_config.obj: ui/qt/mks/axis_manager/axis_manager_config.cpp.obj
-.PHONY : ui/qt/mks/axis_manager/axis_manager_config.obj
+ui/qt/mks/axis_manager/axis_lifecycle_controller.obj: ui/qt/mks/axis_manager/axis_lifecycle_controller.cpp.obj
+.PHONY : ui/qt/mks/axis_manager/axis_lifecycle_controller.obj
 
 # target to build an object file
-ui/qt/mks/axis_manager/axis_manager_config.cpp.obj:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/axis_manager/axis_manager_config.cpp.obj
-.PHONY : ui/qt/mks/axis_manager/axis_manager_config.cpp.obj
+ui/qt/mks/axis_manager/axis_lifecycle_controller.cpp.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/axis_manager/axis_lifecycle_controller.cpp.obj
+.PHONY : ui/qt/mks/axis_manager/axis_lifecycle_controller.cpp.obj
 
-ui/qt/mks/axis_manager/axis_manager_config.i: ui/qt/mks/axis_manager/axis_manager_config.cpp.i
-.PHONY : ui/qt/mks/axis_manager/axis_manager_config.i
+ui/qt/mks/axis_manager/axis_lifecycle_controller.i: ui/qt/mks/axis_manager/axis_lifecycle_controller.cpp.i
+.PHONY : ui/qt/mks/axis_manager/axis_lifecycle_controller.i
 
 # target to preprocess a source file
-ui/qt/mks/axis_manager/axis_manager_config.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/axis_manager/axis_manager_config.cpp.i
-.PHONY : ui/qt/mks/axis_manager/axis_manager_config.cpp.i
+ui/qt/mks/axis_manager/axis_lifecycle_controller.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/axis_manager/axis_lifecycle_controller.cpp.i
+.PHONY : ui/qt/mks/axis_manager/axis_lifecycle_controller.cpp.i
 
-ui/qt/mks/axis_manager/axis_manager_config.s: ui/qt/mks/axis_manager/axis_manager_config.cpp.s
-.PHONY : ui/qt/mks/axis_manager/axis_manager_config.s
+ui/qt/mks/axis_manager/axis_lifecycle_controller.s: ui/qt/mks/axis_manager/axis_lifecycle_controller.cpp.s
+.PHONY : ui/qt/mks/axis_manager/axis_lifecycle_controller.s
 
 # target to generate assembly for a file
-ui/qt/mks/axis_manager/axis_manager_config.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/axis_manager/axis_manager_config.cpp.s
-.PHONY : ui/qt/mks/axis_manager/axis_manager_config.cpp.s
+ui/qt/mks/axis_manager/axis_lifecycle_controller.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/axis_manager/axis_lifecycle_controller.cpp.s
+.PHONY : ui/qt/mks/axis_manager/axis_lifecycle_controller.cpp.s
 
-ui/qt/mks/axis_manager/axis_manager_core.obj: ui/qt/mks/axis_manager/axis_manager_core.cpp.obj
-.PHONY : ui/qt/mks/axis_manager/axis_manager_core.obj
+ui/qt/mks/axis_manager/axis_manager.obj: ui/qt/mks/axis_manager/axis_manager.cpp.obj
+.PHONY : ui/qt/mks/axis_manager/axis_manager.obj
 
 # target to build an object file
-ui/qt/mks/axis_manager/axis_manager_core.cpp.obj:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/axis_manager/axis_manager_core.cpp.obj
-.PHONY : ui/qt/mks/axis_manager/axis_manager_core.cpp.obj
+ui/qt/mks/axis_manager/axis_manager.cpp.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/axis_manager/axis_manager.cpp.obj
+.PHONY : ui/qt/mks/axis_manager/axis_manager.cpp.obj
 
-ui/qt/mks/axis_manager/axis_manager_core.i: ui/qt/mks/axis_manager/axis_manager_core.cpp.i
-.PHONY : ui/qt/mks/axis_manager/axis_manager_core.i
+ui/qt/mks/axis_manager/axis_manager.i: ui/qt/mks/axis_manager/axis_manager.cpp.i
+.PHONY : ui/qt/mks/axis_manager/axis_manager.i
 
 # target to preprocess a source file
-ui/qt/mks/axis_manager/axis_manager_core.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/axis_manager/axis_manager_core.cpp.i
-.PHONY : ui/qt/mks/axis_manager/axis_manager_core.cpp.i
+ui/qt/mks/axis_manager/axis_manager.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/axis_manager/axis_manager.cpp.i
+.PHONY : ui/qt/mks/axis_manager/axis_manager.cpp.i
 
-ui/qt/mks/axis_manager/axis_manager_core.s: ui/qt/mks/axis_manager/axis_manager_core.cpp.s
-.PHONY : ui/qt/mks/axis_manager/axis_manager_core.s
+ui/qt/mks/axis_manager/axis_manager.s: ui/qt/mks/axis_manager/axis_manager.cpp.s
+.PHONY : ui/qt/mks/axis_manager/axis_manager.s
 
 # target to generate assembly for a file
-ui/qt/mks/axis_manager/axis_manager_core.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/axis_manager/axis_manager_core.cpp.s
-.PHONY : ui/qt/mks/axis_manager/axis_manager_core.cpp.s
+ui/qt/mks/axis_manager/axis_manager.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/axis_manager/axis_manager.cpp.s
+.PHONY : ui/qt/mks/axis_manager/axis_manager.cpp.s
 
-ui/qt/mks/axis_manager/axis_manager_hal_service.obj: ui/qt/mks/axis_manager/axis_manager_hal_service.cpp.obj
-.PHONY : ui/qt/mks/axis_manager/axis_manager_hal_service.obj
+ui/qt/mks/axis_manager/axis_motion_controller.obj: ui/qt/mks/axis_manager/axis_motion_controller.cpp.obj
+.PHONY : ui/qt/mks/axis_manager/axis_motion_controller.obj
 
 # target to build an object file
-ui/qt/mks/axis_manager/axis_manager_hal_service.cpp.obj:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/axis_manager/axis_manager_hal_service.cpp.obj
-.PHONY : ui/qt/mks/axis_manager/axis_manager_hal_service.cpp.obj
+ui/qt/mks/axis_manager/axis_motion_controller.cpp.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/axis_manager/axis_motion_controller.cpp.obj
+.PHONY : ui/qt/mks/axis_manager/axis_motion_controller.cpp.obj
 
-ui/qt/mks/axis_manager/axis_manager_hal_service.i: ui/qt/mks/axis_manager/axis_manager_hal_service.cpp.i
-.PHONY : ui/qt/mks/axis_manager/axis_manager_hal_service.i
+ui/qt/mks/axis_manager/axis_motion_controller.i: ui/qt/mks/axis_manager/axis_motion_controller.cpp.i
+.PHONY : ui/qt/mks/axis_manager/axis_motion_controller.i
 
 # target to preprocess a source file
-ui/qt/mks/axis_manager/axis_manager_hal_service.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/axis_manager/axis_manager_hal_service.cpp.i
-.PHONY : ui/qt/mks/axis_manager/axis_manager_hal_service.cpp.i
+ui/qt/mks/axis_manager/axis_motion_controller.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/axis_manager/axis_motion_controller.cpp.i
+.PHONY : ui/qt/mks/axis_manager/axis_motion_controller.cpp.i
 
-ui/qt/mks/axis_manager/axis_manager_hal_service.s: ui/qt/mks/axis_manager/axis_manager_hal_service.cpp.s
-.PHONY : ui/qt/mks/axis_manager/axis_manager_hal_service.s
+ui/qt/mks/axis_manager/axis_motion_controller.s: ui/qt/mks/axis_manager/axis_motion_controller.cpp.s
+.PHONY : ui/qt/mks/axis_manager/axis_motion_controller.s
 
 # target to generate assembly for a file
-ui/qt/mks/axis_manager/axis_manager_hal_service.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/axis_manager/axis_manager_hal_service.cpp.s
-.PHONY : ui/qt/mks/axis_manager/axis_manager_hal_service.cpp.s
+ui/qt/mks/axis_manager/axis_motion_controller.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/axis_manager/axis_motion_controller.cpp.s
+.PHONY : ui/qt/mks/axis_manager/axis_motion_controller.cpp.s
 
-ui/qt/mks/axis_manager/axis_manager_homing_sequence.obj: ui/qt/mks/axis_manager/axis_manager_homing_sequence.cpp.obj
-.PHONY : ui/qt/mks/axis_manager/axis_manager_homing_sequence.obj
+ui/qt/mks/axis_manager/axis_telemetry_controller.obj: ui/qt/mks/axis_manager/axis_telemetry_controller.cpp.obj
+.PHONY : ui/qt/mks/axis_manager/axis_telemetry_controller.obj
 
 # target to build an object file
-ui/qt/mks/axis_manager/axis_manager_homing_sequence.cpp.obj:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/axis_manager/axis_manager_homing_sequence.cpp.obj
-.PHONY : ui/qt/mks/axis_manager/axis_manager_homing_sequence.cpp.obj
+ui/qt/mks/axis_manager/axis_telemetry_controller.cpp.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/axis_manager/axis_telemetry_controller.cpp.obj
+.PHONY : ui/qt/mks/axis_manager/axis_telemetry_controller.cpp.obj
 
-ui/qt/mks/axis_manager/axis_manager_homing_sequence.i: ui/qt/mks/axis_manager/axis_manager_homing_sequence.cpp.i
-.PHONY : ui/qt/mks/axis_manager/axis_manager_homing_sequence.i
-
-# target to preprocess a source file
-ui/qt/mks/axis_manager/axis_manager_homing_sequence.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/axis_manager/axis_manager_homing_sequence.cpp.i
-.PHONY : ui/qt/mks/axis_manager/axis_manager_homing_sequence.cpp.i
-
-ui/qt/mks/axis_manager/axis_manager_homing_sequence.s: ui/qt/mks/axis_manager/axis_manager_homing_sequence.cpp.s
-.PHONY : ui/qt/mks/axis_manager/axis_manager_homing_sequence.s
-
-# target to generate assembly for a file
-ui/qt/mks/axis_manager/axis_manager_homing_sequence.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/axis_manager/axis_manager_homing_sequence.cpp.s
-.PHONY : ui/qt/mks/axis_manager/axis_manager_homing_sequence.cpp.s
-
-ui/qt/mks/axis_manager/axis_manager_motion.obj: ui/qt/mks/axis_manager/axis_manager_motion.cpp.obj
-.PHONY : ui/qt/mks/axis_manager/axis_manager_motion.obj
-
-# target to build an object file
-ui/qt/mks/axis_manager/axis_manager_motion.cpp.obj:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/axis_manager/axis_manager_motion.cpp.obj
-.PHONY : ui/qt/mks/axis_manager/axis_manager_motion.cpp.obj
-
-ui/qt/mks/axis_manager/axis_manager_motion.i: ui/qt/mks/axis_manager/axis_manager_motion.cpp.i
-.PHONY : ui/qt/mks/axis_manager/axis_manager_motion.i
+ui/qt/mks/axis_manager/axis_telemetry_controller.i: ui/qt/mks/axis_manager/axis_telemetry_controller.cpp.i
+.PHONY : ui/qt/mks/axis_manager/axis_telemetry_controller.i
 
 # target to preprocess a source file
-ui/qt/mks/axis_manager/axis_manager_motion.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/axis_manager/axis_manager_motion.cpp.i
-.PHONY : ui/qt/mks/axis_manager/axis_manager_motion.cpp.i
+ui/qt/mks/axis_manager/axis_telemetry_controller.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/axis_manager/axis_telemetry_controller.cpp.i
+.PHONY : ui/qt/mks/axis_manager/axis_telemetry_controller.cpp.i
 
-ui/qt/mks/axis_manager/axis_manager_motion.s: ui/qt/mks/axis_manager/axis_manager_motion.cpp.s
-.PHONY : ui/qt/mks/axis_manager/axis_manager_motion.s
-
-# target to generate assembly for a file
-ui/qt/mks/axis_manager/axis_manager_motion.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/axis_manager/axis_manager_motion.cpp.s
-.PHONY : ui/qt/mks/axis_manager/axis_manager_motion.cpp.s
-
-ui/qt/mks/axis_manager/axis_manager_params.obj: ui/qt/mks/axis_manager/axis_manager_params.cpp.obj
-.PHONY : ui/qt/mks/axis_manager/axis_manager_params.obj
-
-# target to build an object file
-ui/qt/mks/axis_manager/axis_manager_params.cpp.obj:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/axis_manager/axis_manager_params.cpp.obj
-.PHONY : ui/qt/mks/axis_manager/axis_manager_params.cpp.obj
-
-ui/qt/mks/axis_manager/axis_manager_params.i: ui/qt/mks/axis_manager/axis_manager_params.cpp.i
-.PHONY : ui/qt/mks/axis_manager/axis_manager_params.i
-
-# target to preprocess a source file
-ui/qt/mks/axis_manager/axis_manager_params.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/axis_manager/axis_manager_params.cpp.i
-.PHONY : ui/qt/mks/axis_manager/axis_manager_params.cpp.i
-
-ui/qt/mks/axis_manager/axis_manager_params.s: ui/qt/mks/axis_manager/axis_manager_params.cpp.s
-.PHONY : ui/qt/mks/axis_manager/axis_manager_params.s
+ui/qt/mks/axis_manager/axis_telemetry_controller.s: ui/qt/mks/axis_manager/axis_telemetry_controller.cpp.s
+.PHONY : ui/qt/mks/axis_manager/axis_telemetry_controller.s
 
 # target to generate assembly for a file
-ui/qt/mks/axis_manager/axis_manager_params.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/axis_manager/axis_manager_params.cpp.s
-.PHONY : ui/qt/mks/axis_manager/axis_manager_params.cpp.s
+ui/qt/mks/axis_manager/axis_telemetry_controller.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/axis_manager/axis_telemetry_controller.cpp.s
+.PHONY : ui/qt/mks/axis_manager/axis_telemetry_controller.cpp.s
 
 ui/qt/mks/axis_workspace/axis_workspace.obj: ui/qt/mks/axis_workspace/axis_workspace.cpp.obj
 .PHONY : ui/qt/mks/axis_workspace/axis_workspace.obj
@@ -993,125 +930,101 @@ ui/qt/mks/axis_workspace/axis_workspace.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/axis_workspace/axis_workspace.cpp.s
 .PHONY : ui/qt/mks/axis_workspace/axis_workspace.cpp.s
 
-ui/qt/mks/axis_workspace/axis_workspace_config_panel.obj: ui/qt/mks/axis_workspace/axis_workspace_config_panel.cpp.obj
-.PHONY : ui/qt/mks/axis_workspace/axis_workspace_config_panel.obj
+ui/qt/mks/main_window/main_window.obj: ui/qt/mks/main_window/main_window.cpp.obj
+.PHONY : ui/qt/mks/main_window/main_window.obj
 
 # target to build an object file
-ui/qt/mks/axis_workspace/axis_workspace_config_panel.cpp.obj:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/axis_workspace/axis_workspace_config_panel.cpp.obj
-.PHONY : ui/qt/mks/axis_workspace/axis_workspace_config_panel.cpp.obj
+ui/qt/mks/main_window/main_window.cpp.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/main_window/main_window.cpp.obj
+.PHONY : ui/qt/mks/main_window/main_window.cpp.obj
 
-ui/qt/mks/axis_workspace/axis_workspace_config_panel.i: ui/qt/mks/axis_workspace/axis_workspace_config_panel.cpp.i
-.PHONY : ui/qt/mks/axis_workspace/axis_workspace_config_panel.i
+ui/qt/mks/main_window/main_window.i: ui/qt/mks/main_window/main_window.cpp.i
+.PHONY : ui/qt/mks/main_window/main_window.i
 
 # target to preprocess a source file
-ui/qt/mks/axis_workspace/axis_workspace_config_panel.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/axis_workspace/axis_workspace_config_panel.cpp.i
-.PHONY : ui/qt/mks/axis_workspace/axis_workspace_config_panel.cpp.i
+ui/qt/mks/main_window/main_window.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/main_window/main_window.cpp.i
+.PHONY : ui/qt/mks/main_window/main_window.cpp.i
 
-ui/qt/mks/axis_workspace/axis_workspace_config_panel.s: ui/qt/mks/axis_workspace/axis_workspace_config_panel.cpp.s
-.PHONY : ui/qt/mks/axis_workspace/axis_workspace_config_panel.s
+ui/qt/mks/main_window/main_window.s: ui/qt/mks/main_window/main_window.cpp.s
+.PHONY : ui/qt/mks/main_window/main_window.s
 
 # target to generate assembly for a file
-ui/qt/mks/axis_workspace/axis_workspace_config_panel.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/axis_workspace/axis_workspace_config_panel.cpp.s
-.PHONY : ui/qt/mks/axis_workspace/axis_workspace_config_panel.cpp.s
+ui/qt/mks/main_window/main_window.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/main_window/main_window.cpp.s
+.PHONY : ui/qt/mks/main_window/main_window.cpp.s
 
-ui/qt/mks/axis_workspace/axis_workspace_control_panel.obj: ui/qt/mks/axis_workspace/axis_workspace_control_panel.cpp.obj
-.PHONY : ui/qt/mks/axis_workspace/axis_workspace_control_panel.obj
+ui/qt/mks/mks_all_axes_control_workspace/mks_all_axes_control_workspace.obj: ui/qt/mks/mks_all_axes_control_workspace/mks_all_axes_control_workspace.cpp.obj
+.PHONY : ui/qt/mks/mks_all_axes_control_workspace/mks_all_axes_control_workspace.obj
 
 # target to build an object file
-ui/qt/mks/axis_workspace/axis_workspace_control_panel.cpp.obj:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/axis_workspace/axis_workspace_control_panel.cpp.obj
-.PHONY : ui/qt/mks/axis_workspace/axis_workspace_control_panel.cpp.obj
+ui/qt/mks/mks_all_axes_control_workspace/mks_all_axes_control_workspace.cpp.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/mks_all_axes_control_workspace/mks_all_axes_control_workspace.cpp.obj
+.PHONY : ui/qt/mks/mks_all_axes_control_workspace/mks_all_axes_control_workspace.cpp.obj
 
-ui/qt/mks/axis_workspace/axis_workspace_control_panel.i: ui/qt/mks/axis_workspace/axis_workspace_control_panel.cpp.i
-.PHONY : ui/qt/mks/axis_workspace/axis_workspace_control_panel.i
+ui/qt/mks/mks_all_axes_control_workspace/mks_all_axes_control_workspace.i: ui/qt/mks/mks_all_axes_control_workspace/mks_all_axes_control_workspace.cpp.i
+.PHONY : ui/qt/mks/mks_all_axes_control_workspace/mks_all_axes_control_workspace.i
 
 # target to preprocess a source file
-ui/qt/mks/axis_workspace/axis_workspace_control_panel.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/axis_workspace/axis_workspace_control_panel.cpp.i
-.PHONY : ui/qt/mks/axis_workspace/axis_workspace_control_panel.cpp.i
+ui/qt/mks/mks_all_axes_control_workspace/mks_all_axes_control_workspace.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/mks_all_axes_control_workspace/mks_all_axes_control_workspace.cpp.i
+.PHONY : ui/qt/mks/mks_all_axes_control_workspace/mks_all_axes_control_workspace.cpp.i
 
-ui/qt/mks/axis_workspace/axis_workspace_control_panel.s: ui/qt/mks/axis_workspace/axis_workspace_control_panel.cpp.s
-.PHONY : ui/qt/mks/axis_workspace/axis_workspace_control_panel.s
+ui/qt/mks/mks_all_axes_control_workspace/mks_all_axes_control_workspace.s: ui/qt/mks/mks_all_axes_control_workspace/mks_all_axes_control_workspace.cpp.s
+.PHONY : ui/qt/mks/mks_all_axes_control_workspace/mks_all_axes_control_workspace.s
 
 # target to generate assembly for a file
-ui/qt/mks/axis_workspace/axis_workspace_control_panel.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/axis_workspace/axis_workspace_control_panel.cpp.s
-.PHONY : ui/qt/mks/axis_workspace/axis_workspace_control_panel.cpp.s
+ui/qt/mks/mks_all_axes_control_workspace/mks_all_axes_control_workspace.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/mks_all_axes_control_workspace/mks_all_axes_control_workspace.cpp.s
+.PHONY : ui/qt/mks/mks_all_axes_control_workspace/mks_all_axes_control_workspace.cpp.s
 
-ui/qt/mks/main_window.obj: ui/qt/mks/main_window.cpp.obj
-.PHONY : ui/qt/mks/main_window.obj
+ui/qt/mks/scope_widget/ScopeWidget.obj: ui/qt/mks/scope_widget/ScopeWidget.cpp.obj
+.PHONY : ui/qt/mks/scope_widget/ScopeWidget.obj
 
 # target to build an object file
-ui/qt/mks/main_window.cpp.obj:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/main_window.cpp.obj
-.PHONY : ui/qt/mks/main_window.cpp.obj
+ui/qt/mks/scope_widget/ScopeWidget.cpp.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/scope_widget/ScopeWidget.cpp.obj
+.PHONY : ui/qt/mks/scope_widget/ScopeWidget.cpp.obj
 
-ui/qt/mks/main_window.i: ui/qt/mks/main_window.cpp.i
-.PHONY : ui/qt/mks/main_window.i
+ui/qt/mks/scope_widget/ScopeWidget.i: ui/qt/mks/scope_widget/ScopeWidget.cpp.i
+.PHONY : ui/qt/mks/scope_widget/ScopeWidget.i
 
 # target to preprocess a source file
-ui/qt/mks/main_window.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/main_window.cpp.i
-.PHONY : ui/qt/mks/main_window.cpp.i
+ui/qt/mks/scope_widget/ScopeWidget.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/scope_widget/ScopeWidget.cpp.i
+.PHONY : ui/qt/mks/scope_widget/ScopeWidget.cpp.i
 
-ui/qt/mks/main_window.s: ui/qt/mks/main_window.cpp.s
-.PHONY : ui/qt/mks/main_window.s
+ui/qt/mks/scope_widget/ScopeWidget.s: ui/qt/mks/scope_widget/ScopeWidget.cpp.s
+.PHONY : ui/qt/mks/scope_widget/ScopeWidget.s
 
 # target to generate assembly for a file
-ui/qt/mks/main_window.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/main_window.cpp.s
-.PHONY : ui/qt/mks/main_window.cpp.s
+ui/qt/mks/scope_widget/ScopeWidget.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/scope_widget/ScopeWidget.cpp.s
+.PHONY : ui/qt/mks/scope_widget/ScopeWidget.cpp.s
 
-ui/qt/mks/mks_all_axes_control_workspace.obj: ui/qt/mks/mks_all_axes_control_workspace.cpp.obj
-.PHONY : ui/qt/mks/mks_all_axes_control_workspace.obj
+ui/qt/mks/sequencer_widget/sequencer_widget.obj: ui/qt/mks/sequencer_widget/sequencer_widget.cpp.obj
+.PHONY : ui/qt/mks/sequencer_widget/sequencer_widget.obj
 
 # target to build an object file
-ui/qt/mks/mks_all_axes_control_workspace.cpp.obj:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/mks_all_axes_control_workspace.cpp.obj
-.PHONY : ui/qt/mks/mks_all_axes_control_workspace.cpp.obj
+ui/qt/mks/sequencer_widget/sequencer_widget.cpp.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/sequencer_widget/sequencer_widget.cpp.obj
+.PHONY : ui/qt/mks/sequencer_widget/sequencer_widget.cpp.obj
 
-ui/qt/mks/mks_all_axes_control_workspace.i: ui/qt/mks/mks_all_axes_control_workspace.cpp.i
-.PHONY : ui/qt/mks/mks_all_axes_control_workspace.i
-
-# target to preprocess a source file
-ui/qt/mks/mks_all_axes_control_workspace.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/mks_all_axes_control_workspace.cpp.i
-.PHONY : ui/qt/mks/mks_all_axes_control_workspace.cpp.i
-
-ui/qt/mks/mks_all_axes_control_workspace.s: ui/qt/mks/mks_all_axes_control_workspace.cpp.s
-.PHONY : ui/qt/mks/mks_all_axes_control_workspace.s
-
-# target to generate assembly for a file
-ui/qt/mks/mks_all_axes_control_workspace.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/mks_all_axes_control_workspace.cpp.s
-.PHONY : ui/qt/mks/mks_all_axes_control_workspace.cpp.s
-
-ui/qt/mks/sequencer_widget.obj: ui/qt/mks/sequencer_widget.cpp.obj
-.PHONY : ui/qt/mks/sequencer_widget.obj
-
-# target to build an object file
-ui/qt/mks/sequencer_widget.cpp.obj:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/sequencer_widget.cpp.obj
-.PHONY : ui/qt/mks/sequencer_widget.cpp.obj
-
-ui/qt/mks/sequencer_widget.i: ui/qt/mks/sequencer_widget.cpp.i
-.PHONY : ui/qt/mks/sequencer_widget.i
+ui/qt/mks/sequencer_widget/sequencer_widget.i: ui/qt/mks/sequencer_widget/sequencer_widget.cpp.i
+.PHONY : ui/qt/mks/sequencer_widget/sequencer_widget.i
 
 # target to preprocess a source file
-ui/qt/mks/sequencer_widget.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/sequencer_widget.cpp.i
-.PHONY : ui/qt/mks/sequencer_widget.cpp.i
+ui/qt/mks/sequencer_widget/sequencer_widget.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/sequencer_widget/sequencer_widget.cpp.i
+.PHONY : ui/qt/mks/sequencer_widget/sequencer_widget.cpp.i
 
-ui/qt/mks/sequencer_widget.s: ui/qt/mks/sequencer_widget.cpp.s
-.PHONY : ui/qt/mks/sequencer_widget.s
+ui/qt/mks/sequencer_widget/sequencer_widget.s: ui/qt/mks/sequencer_widget/sequencer_widget.cpp.s
+.PHONY : ui/qt/mks/sequencer_widget/sequencer_widget.s
 
 # target to generate assembly for a file
-ui/qt/mks/sequencer_widget.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/sequencer_widget.cpp.s
-.PHONY : ui/qt/mks/sequencer_widget.cpp.s
+ui/qt/mks/sequencer_widget/sequencer_widget.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\motor_tester_gui.dir\build.make CMakeFiles/motor_tester_gui.dir/ui/qt/mks/sequencer_widget/sequencer_widget.cpp.s
+.PHONY : ui/qt/mks/sequencer_widget/sequencer_widget.cpp.s
 
 # Help Target
 help:
@@ -1121,119 +1034,113 @@ help:
 	@echo ... depend
 	@echo ... edit_cache
 	@echo ... rebuild_cache
+	@echo ... hal_host_service_autogen
+	@echo ... hal_host_service_autogen_timestamp_deps
 	@echo ... hal_ipc_autogen
 	@echo ... hal_ipc_autogen_timestamp_deps
-	@echo ... mks_can_cli_autogen
-	@echo ... mks_can_cli_autogen_timestamp_deps
 	@echo ... motor_tester_gui_autogen
 	@echo ... motor_tester_gui_autogen_timestamp_deps
+	@echo ... hal_host_service
 	@echo ... hal_ipc
-	@echo ... mks_can_cli
 	@echo ... motion_core
 	@echo ... motion_core_no_hw
 	@echo ... motor_tester_gui
-	@echo ... apps/cli/main.obj
-	@echo ... apps/cli/main.i
-	@echo ... apps/cli/main.s
 	@echo ... apps/qt/qt_main.obj
 	@echo ... apps/qt/qt_main.i
 	@echo ... apps/qt/qt_main.s
 	@echo ... drivers/interfaces/init_all_drivers.obj
 	@echo ... drivers/interfaces/init_all_drivers.i
 	@echo ... drivers/interfaces/init_all_drivers.s
-	@echo ... drivers/interfaces/mks_can/adapter/mks_axis_adapter.obj
-	@echo ... drivers/interfaces/mks_can/adapter/mks_axis_adapter.i
-	@echo ... drivers/interfaces/mks_can/adapter/mks_axis_adapter.s
-	@echo ... drivers/interfaces/mks_can/adapter/mks_runtime_config.obj
-	@echo ... drivers/interfaces/mks_can/adapter/mks_runtime_config.i
-	@echo ... drivers/interfaces/mks_can/adapter/mks_runtime_config.s
-	@echo ... drivers/interfaces/mks_can/adapter/mks_runtime_factory.obj
-	@echo ... drivers/interfaces/mks_can/adapter/mks_runtime_factory.i
-	@echo ... drivers/interfaces/mks_can/adapter/mks_runtime_factory.s
-	@echo ... drivers/interfaces/mks_can/axis/mks_axis_configurator.obj
-	@echo ... drivers/interfaces/mks_can/axis/mks_axis_configurator.i
-	@echo ... drivers/interfaces/mks_can/axis/mks_axis_configurator.s
-	@echo ... drivers/interfaces/mks_can/axis/mks_axis_worker.obj
-	@echo ... drivers/interfaces/mks_can/axis/mks_axis_worker.i
-	@echo ... drivers/interfaces/mks_can/axis/mks_axis_worker.s
-	@echo ... drivers/interfaces/mks_can/axis/mks_homing_state_machine.obj
-	@echo ... drivers/interfaces/mks_can/axis/mks_homing_state_machine.i
-	@echo ... drivers/interfaces/mks_can/axis/mks_homing_state_machine.s
-	@echo ... drivers/interfaces/mks_can/dictionary/mks_dictionary.obj
-	@echo ... drivers/interfaces/mks_can/dictionary/mks_dictionary.i
-	@echo ... drivers/interfaces/mks_can/dictionary/mks_dictionary.s
-	@echo ... drivers/interfaces/mks_can/internal/port/gs_usb_can_port.obj
-	@echo ... drivers/interfaces/mks_can/internal/port/gs_usb_can_port.i
-	@echo ... drivers/interfaces/mks_can/internal/port/gs_usb_can_port.s
-	@echo ... drivers/interfaces/mks_can/internal/port/sim_can_port.obj
-	@echo ... drivers/interfaces/mks_can/internal/port/sim_can_port.i
-	@echo ... drivers/interfaces/mks_can/internal/port/sim_can_port.s
-	@echo ... drivers/interfaces/mks_can/internal/protocol/mks_protocol.obj
-	@echo ... drivers/interfaces/mks_can/internal/protocol/mks_protocol.i
-	@echo ... drivers/interfaces/mks_can/internal/protocol/mks_protocol.s
-	@echo ... drivers/interfaces/mks_can/manager/mks_can_bus_manager.obj
-	@echo ... drivers/interfaces/mks_can/manager/mks_can_bus_manager.i
-	@echo ... drivers/interfaces/mks_can/manager/mks_can_bus_manager.s
-	@echo ... drivers/interfaces/mks_can/manager/mks_topology_scanner.obj
-	@echo ... drivers/interfaces/mks_can/manager/mks_topology_scanner.i
-	@echo ... drivers/interfaces/mks_can/manager/mks_topology_scanner.s
-	@echo ... hal_ipc/src/client.obj
-	@echo ... hal_ipc/src/client.i
-	@echo ... hal_ipc/src/client.s
-	@echo ... hal_ipc/src/protocol.obj
-	@echo ... hal_ipc/src/protocol.i
-	@echo ... hal_ipc/src/protocol.s
-	@echo ... hal_ipc/src/server.obj
-	@echo ... hal_ipc/src/server.i
-	@echo ... hal_ipc/src/server.s
+	@echo ... drivers/interfaces/mks_can/gs_usb_can_port.obj
+	@echo ... drivers/interfaces/mks_can/gs_usb_can_port.i
+	@echo ... drivers/interfaces/mks_can/gs_usb_can_port.s
+	@echo ... drivers/interfaces/mks_can/mks_axis_adapter.obj
+	@echo ... drivers/interfaces/mks_can/mks_axis_adapter.i
+	@echo ... drivers/interfaces/mks_can/mks_axis_adapter.s
+	@echo ... drivers/interfaces/mks_can/mks_axis_configurator.obj
+	@echo ... drivers/interfaces/mks_can/mks_axis_configurator.i
+	@echo ... drivers/interfaces/mks_can/mks_axis_configurator.s
+	@echo ... drivers/interfaces/mks_can/mks_axis_worker.obj
+	@echo ... drivers/interfaces/mks_can/mks_axis_worker.i
+	@echo ... drivers/interfaces/mks_can/mks_axis_worker.s
+	@echo ... drivers/interfaces/mks_can/mks_can_bus_manager.obj
+	@echo ... drivers/interfaces/mks_can/mks_can_bus_manager.i
+	@echo ... drivers/interfaces/mks_can/mks_can_bus_manager.s
+	@echo ... drivers/interfaces/mks_can/mks_dictionary.obj
+	@echo ... drivers/interfaces/mks_can/mks_dictionary.i
+	@echo ... drivers/interfaces/mks_can/mks_dictionary.s
+	@echo ... drivers/interfaces/mks_can/mks_homing_state_machine.obj
+	@echo ... drivers/interfaces/mks_can/mks_homing_state_machine.i
+	@echo ... drivers/interfaces/mks_can/mks_homing_state_machine.s
+	@echo ... drivers/interfaces/mks_can/mks_protocol.obj
+	@echo ... drivers/interfaces/mks_can/mks_protocol.i
+	@echo ... drivers/interfaces/mks_can/mks_protocol.s
+	@echo ... drivers/interfaces/mks_can/mks_runtime_config.obj
+	@echo ... drivers/interfaces/mks_can/mks_runtime_config.i
+	@echo ... drivers/interfaces/mks_can/mks_runtime_config.s
+	@echo ... drivers/interfaces/mks_can/mks_runtime_factory.obj
+	@echo ... drivers/interfaces/mks_can/mks_runtime_factory.i
+	@echo ... drivers/interfaces/mks_can/mks_runtime_factory.s
+	@echo ... drivers/interfaces/mks_can/mks_topology_scanner.obj
+	@echo ... drivers/interfaces/mks_can/mks_topology_scanner.i
+	@echo ... drivers/interfaces/mks_can/mks_topology_scanner.s
+	@echo ... drivers/interfaces/mks_can/sim_can_port.obj
+	@echo ... drivers/interfaces/mks_can/sim_can_port.i
+	@echo ... drivers/interfaces/mks_can/sim_can_port.s
+	@echo ... hal_host_service/hal_host_service.obj
+	@echo ... hal_host_service/hal_host_service.i
+	@echo ... hal_host_service/hal_host_service.s
+	@echo ... hal_host_service_autogen/mocs_compilation.obj
+	@echo ... hal_host_service_autogen/mocs_compilation.i
+	@echo ... hal_host_service_autogen/mocs_compilation.s
+	@echo ... hal_ipc/client/client.obj
+	@echo ... hal_ipc/client/client.i
+	@echo ... hal_ipc/client/client.s
+	@echo ... hal_ipc/ipc_controller/ipc_controller.obj
+	@echo ... hal_ipc/ipc_controller/ipc_controller.i
+	@echo ... hal_ipc/ipc_controller/ipc_controller.s
+	@echo ... hal_ipc/protocol/protocol.obj
+	@echo ... hal_ipc/protocol/protocol.i
+	@echo ... hal_ipc/protocol/protocol.s
+	@echo ... hal_ipc/server/server.obj
+	@echo ... hal_ipc/server/server.i
+	@echo ... hal_ipc/server/server.s
 	@echo ... hal_ipc_autogen/mocs_compilation.obj
 	@echo ... hal_ipc_autogen/mocs_compilation.i
 	@echo ... hal_ipc_autogen/mocs_compilation.s
-	@echo ... mks_can_cli_autogen/mocs_compilation.obj
-	@echo ... mks_can_cli_autogen/mocs_compilation.i
-	@echo ... mks_can_cli_autogen/mocs_compilation.s
 	@echo ... motor_tester_gui_autogen/mocs_compilation.obj
 	@echo ... motor_tester_gui_autogen/mocs_compilation.i
 	@echo ... motor_tester_gui_autogen/mocs_compilation.s
-	@echo ... ui/qt/mks/ScopeWidget.obj
-	@echo ... ui/qt/mks/ScopeWidget.i
-	@echo ... ui/qt/mks/ScopeWidget.s
-	@echo ... ui/qt/mks/axis_manager/axis_manager_config.obj
-	@echo ... ui/qt/mks/axis_manager/axis_manager_config.i
-	@echo ... ui/qt/mks/axis_manager/axis_manager_config.s
-	@echo ... ui/qt/mks/axis_manager/axis_manager_core.obj
-	@echo ... ui/qt/mks/axis_manager/axis_manager_core.i
-	@echo ... ui/qt/mks/axis_manager/axis_manager_core.s
-	@echo ... ui/qt/mks/axis_manager/axis_manager_hal_service.obj
-	@echo ... ui/qt/mks/axis_manager/axis_manager_hal_service.i
-	@echo ... ui/qt/mks/axis_manager/axis_manager_hal_service.s
-	@echo ... ui/qt/mks/axis_manager/axis_manager_homing_sequence.obj
-	@echo ... ui/qt/mks/axis_manager/axis_manager_homing_sequence.i
-	@echo ... ui/qt/mks/axis_manager/axis_manager_homing_sequence.s
-	@echo ... ui/qt/mks/axis_manager/axis_manager_motion.obj
-	@echo ... ui/qt/mks/axis_manager/axis_manager_motion.i
-	@echo ... ui/qt/mks/axis_manager/axis_manager_motion.s
-	@echo ... ui/qt/mks/axis_manager/axis_manager_params.obj
-	@echo ... ui/qt/mks/axis_manager/axis_manager_params.i
-	@echo ... ui/qt/mks/axis_manager/axis_manager_params.s
+	@echo ... ui/qt/mks/axis_manager/axis_config_controller.obj
+	@echo ... ui/qt/mks/axis_manager/axis_config_controller.i
+	@echo ... ui/qt/mks/axis_manager/axis_config_controller.s
+	@echo ... ui/qt/mks/axis_manager/axis_lifecycle_controller.obj
+	@echo ... ui/qt/mks/axis_manager/axis_lifecycle_controller.i
+	@echo ... ui/qt/mks/axis_manager/axis_lifecycle_controller.s
+	@echo ... ui/qt/mks/axis_manager/axis_manager.obj
+	@echo ... ui/qt/mks/axis_manager/axis_manager.i
+	@echo ... ui/qt/mks/axis_manager/axis_manager.s
+	@echo ... ui/qt/mks/axis_manager/axis_motion_controller.obj
+	@echo ... ui/qt/mks/axis_manager/axis_motion_controller.i
+	@echo ... ui/qt/mks/axis_manager/axis_motion_controller.s
+	@echo ... ui/qt/mks/axis_manager/axis_telemetry_controller.obj
+	@echo ... ui/qt/mks/axis_manager/axis_telemetry_controller.i
+	@echo ... ui/qt/mks/axis_manager/axis_telemetry_controller.s
 	@echo ... ui/qt/mks/axis_workspace/axis_workspace.obj
 	@echo ... ui/qt/mks/axis_workspace/axis_workspace.i
 	@echo ... ui/qt/mks/axis_workspace/axis_workspace.s
-	@echo ... ui/qt/mks/axis_workspace/axis_workspace_config_panel.obj
-	@echo ... ui/qt/mks/axis_workspace/axis_workspace_config_panel.i
-	@echo ... ui/qt/mks/axis_workspace/axis_workspace_config_panel.s
-	@echo ... ui/qt/mks/axis_workspace/axis_workspace_control_panel.obj
-	@echo ... ui/qt/mks/axis_workspace/axis_workspace_control_panel.i
-	@echo ... ui/qt/mks/axis_workspace/axis_workspace_control_panel.s
-	@echo ... ui/qt/mks/main_window.obj
-	@echo ... ui/qt/mks/main_window.i
-	@echo ... ui/qt/mks/main_window.s
-	@echo ... ui/qt/mks/mks_all_axes_control_workspace.obj
-	@echo ... ui/qt/mks/mks_all_axes_control_workspace.i
-	@echo ... ui/qt/mks/mks_all_axes_control_workspace.s
-	@echo ... ui/qt/mks/sequencer_widget.obj
-	@echo ... ui/qt/mks/sequencer_widget.i
-	@echo ... ui/qt/mks/sequencer_widget.s
+	@echo ... ui/qt/mks/main_window/main_window.obj
+	@echo ... ui/qt/mks/main_window/main_window.i
+	@echo ... ui/qt/mks/main_window/main_window.s
+	@echo ... ui/qt/mks/mks_all_axes_control_workspace/mks_all_axes_control_workspace.obj
+	@echo ... ui/qt/mks/mks_all_axes_control_workspace/mks_all_axes_control_workspace.i
+	@echo ... ui/qt/mks/mks_all_axes_control_workspace/mks_all_axes_control_workspace.s
+	@echo ... ui/qt/mks/scope_widget/ScopeWidget.obj
+	@echo ... ui/qt/mks/scope_widget/ScopeWidget.i
+	@echo ... ui/qt/mks/scope_widget/ScopeWidget.s
+	@echo ... ui/qt/mks/sequencer_widget/sequencer_widget.obj
+	@echo ... ui/qt/mks/sequencer_widget/sequencer_widget.i
+	@echo ... ui/qt/mks/sequencer_widget/sequencer_widget.s
 .PHONY : help
 
 

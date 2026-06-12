@@ -1,0 +1,116 @@
+#pragma once
+
+#include "motion_core/types.h"
+#include <cstddef>
+#include <cstdint>
+#include <cmath>
+
+namespace motion_core {
+
+
+enum class ServiceCommandType : std::uint8_t {
+    Enable = 0,
+    Disable,
+    Home,
+    ClearErrors,
+    SetZero,
+    ResetDrive,
+    ClearMotionQueue
+};
+
+struct ServiceCommandPoint {
+    ControlOwner source{ControlOwner::UI};
+    ServiceCommandType type;
+    int axis_id;
+    double homing_speed_deg_per_sec{0.0};
+};
+
+enum class MotionCommandType : std::uint8_t {
+    Position = 0,
+    Velocity,
+    Stream
+};
+
+struct MotionCommandPoint {
+    ControlOwner source{ControlOwner::UI};
+    MotionCommandType type;
+    int axis_id;
+    double value;           // Replaces target_position_deg
+    double velocity;        // Replaces target_velocity_deg_per_sec / profile_speed_rpm
+    double acceleration;    // Replaces profile_accel_percent
+    uint64_t timestamp_us;  // Replaces sample_period_sec conceptually, or acts as sequence timestamp
+    
+    // Maintain sample_period_sec since streaming drivers might depend on it heavily
+    double sample_period_sec{0.004};
+    bool is_relative{false};
+};
+
+[[nodiscard]] inline MotionCommandPoint build_motion_command_point(
+    int axis_id,
+    MotionCommandType type,
+    double target_position_deg,
+    double target_velocity_deg_s,
+    double profile_accel_percent,
+    double sample_period_sec,
+    bool is_relative,
+    int profile_speed_rpm = 0) {
+    
+    MotionCommandPoint pt{};
+    pt.type = type;
+    pt.axis_id = axis_id;
+    pt.value = target_position_deg;
+    pt.is_relative = is_relative;
+    
+    // Resolve velocity
+    if (std::isfinite(target_velocity_deg_s) && target_velocity_deg_s > 0.0) {
+        pt.velocity = target_velocity_deg_s;
+    } else {
+        const int clamped_rpm = (profile_speed_rpm < 0) ? 0 : (profile_speed_rpm > 3000) ? 3000 : profile_speed_rpm;
+        pt.velocity = static_cast<double>(clamped_rpm) * 6.0;
+    }
+    
+    // Resolve acceleration
+    if (std::isfinite(profile_accel_percent) && profile_accel_percent > 0.0) {
+        pt.acceleration = (profile_accel_percent > 100.0) ? 100.0 : profile_accel_percent;
+    } else {
+        pt.acceleration = 0.0;
+    }
+    
+    // Resolve sample period
+    pt.sample_period_sec = (std::isfinite(sample_period_sec) && sample_period_sec > 0.0) ? sample_period_sec : 0.005;
+    pt.timestamp_us = 0U;
+    
+    return pt;
+}
+
+struct TelemetrySnapshot {
+    int axis_id;
+    double position;
+    double velocity;
+    double current;
+    double target_position{0.0};
+    bool has_target_position{false};
+    bool enabled;
+    bool fault;
+    uint64_t timestamp_us;
+    
+    // Let's keep a few essential legacy fields so the UI plot and legacy internals don't completely break, 
+    // or map them exactly to the user's snapshot and just use position/velocity/current.
+    AxisState state{AxisState::Unknown};
+    AxisMode mode{AxisMode::ProfilePosition};
+    std::uint32_t digital_inputs{0};
+    std::uint32_t status_word{0};
+    std::uint32_t protection_code{0};
+    std::uint32_t motion_status_code{0};
+};
+
+struct MotionQueueStats {
+    std::size_t size{0U};
+    std::size_t capacity{0U};
+    std::uint64_t pushed{0U};
+    std::uint64_t dropped{0U};
+    std::uint64_t underruns{0U};
+    std::uint64_t short_starts{0U};
+};
+
+} // namespace motion_core

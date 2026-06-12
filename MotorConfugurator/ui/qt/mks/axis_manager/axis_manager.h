@@ -1,26 +1,26 @@
 #pragma once
 
 #include <QObject>
-#include <QSet>
-#include <QString>
 #include <QVariantList>
 #include <QVariantMap>
-
-#include "motion_core/axis_interface.h"
-#include "motion_core/bus_manager_interface.h"
-#include "motion_core/hal_runtime.h"
-#include "hal_ipc/server.h"
-#include "motion_core/result.h"
-#include "motion_core/config/hal_runtime_config.h"
-#include "motion_core/config/axis_config.h"
-
-#include <cstdint>
 #include <memory>
-#include <mutex>
-#include <unordered_map>
-#include <vector>
 
-class QTimer;
+#include "motion_core/types.h"
+#include "motion_core/axis_interface.h"
+#include "motion_core/axis_config.h"
+#include "motion_core/trajectory_generator.h"
+
+// Forward declarations of sub-controllers
+namespace mks {
+class AxisLifecycleController;
+class AxisMotionController;
+class AxisConfigController;
+class AxisTelemetryController;
+}
+
+namespace hal_host {
+class HalHostService;
+}
 
 namespace mks {
 
@@ -28,13 +28,15 @@ class AxisManager final : public QObject {
     Q_OBJECT
 
 public:
-    explicit AxisManager(QObject* parent = nullptr);
+    explicit AxisManager(
+        hal_host::HalHostService& host_service,
+        QObject* parent = nullptr);
     ~AxisManager() override;
 
 public slots:
+    // Lifecycle API
     void openDevice(const QString& device_path, int baud_rate);
     void openEthercatDevice(const QString& interface_name);
-    void setMksHomingSequenceUiLock(bool active);
     void closeMksDevice();
     void closeEthercatDevice();
     void closeDevice();
@@ -43,29 +45,33 @@ public slots:
     void watchAxis(int axis_id, bool enabled);
     void setMotionSource(motion_core::ControlOwner source);
     motion_core::ControlOwner activeSource() const;
-    void emergencyStop(int axis_id);
+    void requestManualTakeover(bool enable);
+    void startRuntime();
+    void stopRuntime();
+    std::shared_ptr<motion_core::IAxis> getAxis(int axis_id) const;
+
+    // Motion API
     void enqueueMotionBatch(int axis_id, const QVariantList& points);
     void enqueueServiceBatch(int axis_id, const QVariantList& commands);
+    void emergencyStop(int axis_id);
+    void startMksHomingSequence(const QList<int>& axis_ids);
+    void stopMksHomingSequence();
+    void startSineMode(int axis_id, const motion_core::SineConfig& config);
+    void stopSineMode(int axis_id);
+    bool isSineModeActive(int axis_id) const;
 
-    void requestListParameters(int axis_id);
-    void requestReadParameters(int axis_id);
-    void applyParameterPatch(int axis_id, const QVariantList& patch);
-    void setPersistentParameter(int axis_id, int domain, int value, const QString& name, const QVariant& data);
-
+    // Config API
+    void loadHalConfig(const QString& config_path);
+    void saveHalConfig(const QString& config_path);
     void exportAxisConfig(int axis_id, const QString& path);
     void importAxisConfigPreview(int axis_id, const QString& path);
     void importAxisConfig(int axis_id, const QString& path);
 
-    void loadHalConfig(const QString& config_path);
-    void saveHalConfig(const QString& config_path);
-    void startRuntime();
-    void stopRuntime();
-    void requestManualTakeover(bool enable);
-
-    std::shared_ptr<motion_core::IAxis> getAxis(int axis_id) const;
-
-    void startMksHomingSequence(const QList<int>& axis_ids);
-    void stopMksHomingSequence();
+    // Telemetry & Parameters API
+    void requestListParameters(int axis_id);
+    void requestReadParameters(int axis_id);
+    void applyParameterPatch(int axis_id, const QVariantList& patch);
+    void setPersistentParameter(int axis_id, int domain, int value, const QString& name, const QVariant& data);
 
 signals:
     void logMessage(const QString& transport_tag, const QString& line);
@@ -77,84 +83,23 @@ signals:
     void motionQueueStatsUpdated(int axis_id, const QVariantMap& stats);
     void parameterListReady(int axis_id, const QVariantList& params);
     void parametersRead(int axis_id, const QVariantList& params);
+    void parameterPatchCompleted(int axis_id, bool success, const QString& message);
+    void persistentParameterCompleted(int axis_id, bool success, const QString& message);
     void axisConfigPreviewReady(int axis_id, const QVariantList& patch_entries);
     void manualTakeoverChanged(bool active);
     void hostStateUpdated(const QVariantMap& state);
     void mksHomingSequenceProgress(const QVariantMap& progress);
 
-private slots:
-    void onFastTick();
-    void onHomingSequenceTick();
-
 private:
-    // Internal helpers
-    bool isReady() const;
-    void removeTransportConfig(motion_core::AxisTransportKind transport);
-    void publishTopologySnapshot();
-    void publishTransportOpenStates();
-    void rebuildRuntimeFromCurrentConfig();
-    void applySafetyBaselineForAxis(int axis_id, const QString& reason, bool force_disable = true);
     void publishHostState();
-    void reset_runtime_state();
-    motion_core::Result<void> startRuntimeHeadless();
-    void rebuildTransportRuntime(motion_core::AxisTransportKind transport);
 
-    // Multi-axis homing sequence orchestrator
-    void homingSequenceStartCurrentAxis();
-    void homingSequenceEmitProgress(const QString& status_text);
-
-    // Central IPC dispatcher
-    hal_ipc::HalStateFrameDto handleControlFrame(const hal_ipc::HalControlFrameDto& frame);
-
-    motion_core::Result<std::string> executeAxisOperation(
-        hal_ipc::OwnerRole caller,
-        hal_ipc::ControlOp op,
-        std::uint16_t axis_id,
-        const hal_ipc::AxisPointDto* point,
-        const hal_ipc::HalControlFrameDto& frame);
-
-    motion_core::Result<std::string> executeStopAllAxes(hal_ipc::OwnerRole caller);
-
-    // -----------------------------------------------------------------------
-    // Members
-    // -----------------------------------------------------------------------
-    motion_core::HalRuntime unified_runtime_;
-    hal_ipc::HalIpcServer ipc_server_{};
-
-    QSet<int> mks_axes_;
-    QSet<int> ethercat_axes_;
-    QSet<int> runtime_started_axes_;
-    QSet<int> last_scanned_mks_can_ids_;
-    bool has_mks_scan_snapshot_{false};
-    QString   opened_mks_device_path_;
-    int       opened_mks_baud_rate_{0};
-    bool      mks_device_opened_{false};
-    QString   opened_ethercat_interface_;
-    bool      ethercat_device_opened_{false};
-    motion_core::HalRuntimeConfig current_hal_config_{};
-
-    QTimer* fast_timer_{nullptr};
-    QTimer* slow_timer_{nullptr};
-    QSet<int> watched_axes_;
-    QSet<int> parameter_reads_in_progress_;
-    QSet<int> parameter_writes_in_progress_;
-    int  rr_index_{0};
-    int  ui_priority_axis_id_{-1};
-    double cached_cycle_hz_{0.0};
-
-    mutable std::mutex control_state_mutex_{};
-    std::atomic<motion_core::ControlOwner> active_source_{motion_core::ControlOwner::UI};
-    bool estop_active_{false};
-    bool mks_homing_sequence_ui_lock_active_{false};
-
-    // Multi-axis homing sequence state
-    QTimer* homing_sequence_timer_{nullptr};
-    QList<int> homing_sequence_axis_ids_{};
-    int homing_sequence_index_{-1};
-    enum class HomingSeqPhase { Idle, WaitingAxisComplete, WaitingAxisIdle, WaitingPause };
-    HomingSeqPhase homing_seq_phase_{HomingSeqPhase::Idle};
-    qint64 homing_seq_phase_started_ms_{0};
-    bool homing_seq_running_{false};
+    hal_host::HalHostService& host_service_;
+    std::unique_ptr<AxisLifecycleController> lifecycle_;
+    std::unique_ptr<AxisMotionController> motion_;
+    std::unique_ptr<AxisConfigController> config_;
+    std::unique_ptr<AxisTelemetryController> telemetry_ctrl_;
 };
 
 } // namespace mks
+
+Q_DECLARE_METATYPE(motion_core::SineConfig)

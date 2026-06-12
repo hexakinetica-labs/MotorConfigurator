@@ -1,32 +1,43 @@
 #include "mks/axis_workspace/axis_workspace.h"
 
-#include "mks/axis_workspace/axis_workspace_config_panel.h"
-#include "mks/axis_workspace/axis_workspace_control_panel.h"
 #include "mks/axis_manager/axis_manager.h"
-#include "mks/sequencer_widget.h"
-#include "mks_can/dictionary/mks_dictionary.h"
+#include "mks/sequencer_widget/sequencer_widget.h"
+#include "mks_can/mks_dictionary.h"
 #include "motion_core/parameter_id.h"
+#include "motion_core/types.h"
+#include "mks/scope_widget/ScopeWidget.h"
 
-#include <QCoreApplication>
-#include <QDateTime>
+#include <QAbstractItemView>
+#include <QAbstractSpinBox>
 #include <QCheckBox>
 #include <QComboBox>
+#include <QCoreApplication>
+#include <QDateTime>
 #include <QDoubleSpinBox>
+#include <QEvent>
 #include <QFileDialog>
+#include <QFormLayout>
+#include <QFrame>
+#include <QGroupBox>
+#include <QHBoxLayout>
+#include <QHash>
+#include <QHeaderView>
 #include <QLabel>
 #include <QMessageBox>
 #include <QMetaObject>
 #include <QPushButton>
 #include <QRadioButton>
+#include <QScrollArea>
+#include <QSignalBlocker>
 #include <QSlider>
 #include <QSpinBox>
+#include <QSplitter>
+#include <QStyledItemDelegate>
 #include <QTabWidget>
 #include <QTextEdit>
 #include <QTreeWidget>
 #include <QTreeWidgetItem>
 #include <QVBoxLayout>
-
-#include "mks/ScopeWidget.h"
 
 #include <algorithm>
 #include <chrono>
@@ -106,6 +117,23 @@ QList<QTreeWidgetItem*> parameterItems(QTreeWidget* tree) {
     return out;
 }
 
+QString parameterKey(const int domain, const int value_id) {
+    return QStringLiteral("%1:%2").arg(domain).arg(value_id);
+}
+
+QHash<QString, QTreeWidgetItem*> buildParameterIndex(QTreeWidget* tree) {
+    QHash<QString, QTreeWidgetItem*> index;
+    for (auto* item : parameterItems(tree)) {
+        if (!item) {
+            continue;
+        }
+        const int domain = item->data(kNameColumn, Qt::UserRole).toInt();
+        const int value_id = item->data(kGroupColumn, Qt::UserRole).toInt();
+        index.insert(parameterKey(domain, value_id), item);
+    }
+    return index;
+}
+
 QString decodeSystemState(const int state) {
     switch (state) {
         case 0: return QStringLiteral("Unknown");
@@ -166,13 +194,14 @@ QString decodeMotorStatusText(const QString& transport,
                               const int state_code,
                               const int motion_status,
                               const int status_word) {
-    if (transport.compare(QStringLiteral("mks"), Qt::CaseInsensitive) == 0) {
+    const QString transport_lower = transport.trimmed().toLower();
+    if (transport_lower.contains(QStringLiteral("mks"))) {
         Q_UNUSED(state_code);
         Q_UNUSED(status_word);
         return decodeMksMotionStatus(motion_status);
     }
 
-    if (transport.compare(QStringLiteral("ethercat"), Qt::CaseInsensitive) == 0) {
+    if (transport_lower.contains(QStringLiteral("ethercat"))) {
         Q_UNUSED(motion_status);
         Q_UNUSED(status_word);
         return decodeSystemState(state_code);
@@ -185,20 +214,22 @@ QString decodeMotorStatusText(const QString& transport,
 }
 
 QString decodeProtectionText(const QString& transport, const int protection_code) {
-    if (transport.compare(QStringLiteral("mks"), Qt::CaseInsensitive) == 0) {
+    const QString transport_lower = transport.trimmed().toLower();
+    if (transport_lower.contains(QStringLiteral("mks"))) {
         return decodeMksProtectionText(protection_code);
     }
-    if (transport.compare(QStringLiteral("ethercat"), Qt::CaseInsensitive) == 0) {
+    if (transport_lower.contains(QStringLiteral("ethercat"))) {
         return decodeEthercatFaultText(protection_code);
     }
     return QStringLiteral("Unknown protection state");
 }
 
 QString decodeErrorCodeText(const QString& transport, const int error_code) {
-    if (transport.compare(QStringLiteral("mks"), Qt::CaseInsensitive) == 0) {
+    const QString transport_lower = transport.trimmed().toLower();
+    if (transport_lower.contains(QStringLiteral("mks"))) {
         return decodeMksProtectionText(error_code);
     }
-    if (transport.compare(QStringLiteral("ethercat"), Qt::CaseInsensitive) == 0) {
+    if (transport_lower.contains(QStringLiteral("ethercat"))) {
         return decodeEthercatFaultText(error_code);
     }
     return QStringLiteral("No decoder for current transport");
@@ -241,6 +272,8 @@ AxisWorkspace::AxisWorkspace(int axis_id, mks::AxisManager* manager, QWidget* pa
     connect(manager_, &mks::AxisManager::axisConfigPreviewReady, this, &AxisWorkspace::onAxisConfigPreviewReady);
     connect(manager_, &mks::AxisManager::parameterListReady, this, &AxisWorkspace::onParameterListReady);
     connect(manager_, &mks::AxisManager::parametersRead, this, &AxisWorkspace::onParametersRead);
+    connect(manager_, &mks::AxisManager::parameterPatchCompleted, this, &AxisWorkspace::onParameterPatchCompleted);
+    connect(manager_, &mks::AxisManager::persistentParameterCompleted, this, &AxisWorkspace::onPersistentParameterCompleted);
     connect(manager_, &mks::AxisManager::motionQueueStatsUpdated, this, &AxisWorkspace::onMotionQueueStatsUpdated);
     connect(manager_, &mks::AxisManager::hostStateUpdated, this, &AxisWorkspace::onHostStateUpdated);
 }
@@ -500,15 +533,7 @@ void AxisWorkspace::clearMotionBuffersForServiceCommand(bool reset_ui_to_zero) {
     disableSineMode();
 
     if (manager_) {
-        QVariantMap command;
-        command.insert(QStringLiteral("kind"), 0);
-        QVariantList batch;
-        batch.push_back(command);
-        QMetaObject::invokeMethod(manager_.data(),
-                                  "enqueueServiceBatch",
-                                  Qt::QueuedConnection,
-                                  Q_ARG(int, axis_id_),
-                                  Q_ARG(QVariantList, batch));
+        sendServiceCommand(ServiceCommandKind::ClearMotionQueue);
     }
 }
 
@@ -565,7 +590,11 @@ void AxisWorkspace::onHostStateUpdated(const QVariantMap& state) {
 
     // Bug 6 fix: disable config panel mutating buttons when HexaMotion owns or E-Stop is active.
     // Read-only operations (refresh list, read params, export) stay enabled.
-    const bool config_write_allowed = manual_mode && !estop_active && !mks_ui_locked_by_sequence;
+    const bool config_write_allowed = manual_mode
+        && !estop_active
+        && !mks_ui_locked_by_sequence
+        && !parameter_read_in_progress_
+        && !parameter_write_in_progress_;
     if (config_panel_) {
         auto& cfg = config_panel_->handles();
         if (cfg.btn_apply_params) cfg.btn_apply_params->setEnabled(config_write_allowed);
@@ -596,6 +625,9 @@ void AxisWorkspace::onTelemetryUpdated(int axis_id, const QVariantMap& telemetry
     }
     
     const QString transport = telemetry.value(QStringLiteral("transport")).toString();
+    const QString transport_lower = transport.trimmed().toLower();
+    const bool is_ethercat = transport_lower.contains(QStringLiteral("ethercat"));
+    const bool is_mks = transport_lower.contains(QStringLiteral("mks"));
 
     const int state_code = telemetry.value(QStringLiteral("state")).toInt();
     const int status_word = telemetry.value(QStringLiteral("status_word")).toInt();
@@ -623,8 +655,7 @@ void AxisWorkspace::onTelemetryUpdated(int axis_id, const QVariantMap& telemetry
         h.lbl_error_code->setText(decodeErrorCodeText(transport, error_code));
     }
     if (h.lbl_digital_inputs) {
-        if (transport.compare(QStringLiteral("ethercat"), Qt::CaseInsensitive) == 0
-            && telemetry.contains(QStringLiteral("digital_inputs"))) {
+        if (is_ethercat && telemetry.contains(QStringLiteral("digital_inputs"))) {
             const auto di_mask = static_cast<std::uint32_t>(
                 telemetry.value(QStringLiteral("digital_inputs")).toULongLong());
             h.lbl_digital_inputs->setText(format_digital_inputs_first_8(di_mask));
@@ -676,9 +707,24 @@ void AxisWorkspace::onTelemetryUpdated(int axis_id, const QVariantMap& telemetry
     auto format_rate_period = [](double hz, double period_ms) {
         return QStringLiteral("%1 Hz (%2 ms)").arg(hz, 0, 'f', 1).arg(period_ms, 0, 'f', 1);
     };
+    auto format_event_rate = [](double hz) {
+        return QStringLiteral("%1 events/s").arg(hz, 0, 'f', 1);
+    };
+
+    if (h.lbl_cmd_tx_rate_title) {
+        h.lbl_cmd_tx_rate_title->setText(is_mks ? QStringLiteral("Cmd TX Events:") : QStringLiteral("Control Cycle:"));
+    }
+    if (h.lbl_telemetry_rate_title) {
+        h.lbl_telemetry_rate_title->setText(is_mks ? QStringLiteral("Telemetry Publish:") : QStringLiteral("Telemetry Cycle:"));
+    }
+    if (h.lbl_position_rx_rate_title) {
+        h.lbl_position_rx_rate_title->setText(is_mks ? QStringLiteral("Position RX Events:") : QStringLiteral("Position RX Cycle:"));
+    }
 
     if (h.lbl_cmd_tx_rate) {
-        if (telemetry.contains(QStringLiteral("cmd_tx_hz")) && telemetry.contains(QStringLiteral("cmd_tx_period_ms"))) {
+        if (is_mks && telemetry.contains(QStringLiteral("cmd_tx_hz"))) {
+            h.lbl_cmd_tx_rate->setText(format_event_rate(telemetry.value(QStringLiteral("cmd_tx_hz")).toDouble()));
+        } else if (telemetry.contains(QStringLiteral("cmd_tx_hz")) && telemetry.contains(QStringLiteral("cmd_tx_period_ms"))) {
             h.lbl_cmd_tx_rate->setText(format_rate_period(telemetry.value(QStringLiteral("cmd_tx_hz")).toDouble(),
                                                           telemetry.value(QStringLiteral("cmd_tx_period_ms")).toDouble()));
         } else {
@@ -694,7 +740,9 @@ void AxisWorkspace::onTelemetryUpdated(int axis_id, const QVariantMap& telemetry
         }
     }
     if (h.lbl_position_rx_rate) {
-        if (telemetry.contains(QStringLiteral("position_rx_hz")) && telemetry.contains(QStringLiteral("position_rx_period_ms"))) {
+        if (is_mks && telemetry.contains(QStringLiteral("position_rx_hz"))) {
+            h.lbl_position_rx_rate->setText(format_event_rate(telemetry.value(QStringLiteral("position_rx_hz")).toDouble()));
+        } else if (telemetry.contains(QStringLiteral("position_rx_hz")) && telemetry.contains(QStringLiteral("position_rx_period_ms"))) {
             h.lbl_position_rx_rate->setText(format_rate_period(telemetry.value(QStringLiteral("position_rx_hz")).toDouble(),
                                                                telemetry.value(QStringLiteral("position_rx_period_ms")).toDouble()));
         } else {
@@ -788,7 +836,7 @@ void AxisWorkspace::refreshParameterList() {
 }
 
 void AxisWorkspace::readParametersFromDrive() {
-    if (!manager_ || parameter_read_in_progress_) {
+    if (!manager_ || parameter_read_in_progress_ || parameter_write_in_progress_) {
         return;
     }
     setParameterReadInProgress(true);
@@ -979,6 +1027,8 @@ void AxisWorkspace::applyParametersPatch() {
         }
     }
 
+    setParameterWriteInProgress(true, QStringLiteral("Applying..."));
+
     auto* manager = manager_.data();
     QMetaObject::invokeMethod(manager,
                               [manager, id = axis_id_, patch]() { manager->applyParameterPatch(id, patch); },
@@ -987,8 +1037,6 @@ void AxisWorkspace::applyParametersPatch() {
     for (auto* item : patched_items) {
         item->setText(kNewValueColumn, QString());
     }
-
-    readParametersFromDrive();
 }
 
 void AxisWorkspace::saveSelectedParameterToDriveFlash() {
@@ -1075,6 +1123,8 @@ void AxisWorkspace::saveSelectedParameterToDriveFlash() {
         return;
     }
 
+    setParameterWriteInProgress(true, QStringLiteral("Writing..."));
+
     auto* manager = manager_.data();
     QMetaObject::invokeMethod(manager,
                               [manager,
@@ -1133,7 +1183,12 @@ void AxisWorkspace::onAxisConfigPreviewReady(int axis_id, const QVariantList& pa
         return;
     }
 
-    for (auto* item : parameterItems(config_panel_->handles().config_tree)) {
+    auto* tree = config_panel_->handles().config_tree;
+    tree->setUpdatesEnabled(false);
+    const QSignalBlocker tree_signal_blocker(tree);
+    const auto index = buildParameterIndex(tree);
+
+    for (auto* item : index) {
         if (item->text(kReadOnlyColumn).compare(QStringLiteral("Yes"), Qt::CaseInsensitive) != 0) {
             item->setText(kNewValueColumn, QString());
         }
@@ -1145,15 +1200,14 @@ void AxisWorkspace::onAxisConfigPreviewReady(int axis_id, const QVariantList& pa
         const int value_id = map.value(QStringLiteral("value")).toInt();
         const QString data = map.value(QStringLiteral("data")).toString();
 
-        for (auto* item : parameterItems(config_panel_->handles().config_tree)) {
-            if (item->data(kNameColumn, Qt::UserRole).toInt() == domain
-                && item->data(kGroupColumn, Qt::UserRole).toInt() == value_id
-                && item->text(kReadOnlyColumn).compare(QStringLiteral("Yes"), Qt::CaseInsensitive) != 0) {
-                item->setText(kNewValueColumn, data);
-                break;
-            }
+        const auto it = index.constFind(parameterKey(domain, value_id));
+        if (it != index.cend() && it.value()
+            && it.value()->text(kReadOnlyColumn).compare(QStringLiteral("Yes"), Qt::CaseInsensitive) != 0) {
+            it.value()->setText(kNewValueColumn, data);
         }
     }
+
+    tree->setUpdatesEnabled(true);
 }
 
 void AxisWorkspace::onParameterListReady(int axis_id, const QVariantList& params) {
@@ -1163,6 +1217,7 @@ void AxisWorkspace::onParameterListReady(int axis_id, const QVariantList& params
 
     auto* tree = config_panel_->handles().config_tree;
     auto* desc = config_panel_->handles().txt_description;
+    tree->setUpdatesEnabled(false);
     tree->clear();
     if (desc) {
         desc->clear();
@@ -1220,6 +1275,7 @@ void AxisWorkspace::onParameterListReady(int axis_id, const QVariantList& params
     }
 
     tree->expandAll();
+    tree->setUpdatesEnabled(true);
 }
 
 void AxisWorkspace::onParametersRead(int axis_id, const QVariantList& params) {
@@ -1229,20 +1285,56 @@ void AxisWorkspace::onParametersRead(int axis_id, const QVariantList& params) {
 
     setParameterReadInProgress(false);
 
+    auto* tree = config_panel_->handles().config_tree;
+    tree->setUpdatesEnabled(false);
+    const QSignalBlocker tree_signal_blocker(tree);
+    const auto index = buildParameterIndex(tree);
+
     for (const auto& value_variant : params) {
         const QVariantMap map = value_variant.toMap();
         const int domain = map.value(QStringLiteral("domain")).toInt();
         const int value_id = map.value(QStringLiteral("value")).toInt();
         const QString data = map.value(QStringLiteral("data")).toString();
 
-        for (auto* item : parameterItems(config_panel_->handles().config_tree)) {
-            if (item->data(kNameColumn, Qt::UserRole).toInt() == domain
-                && item->data(kGroupColumn, Qt::UserRole).toInt() == value_id) {
-                item->setText(kCurrentValueColumn, data);
-                break;
-            }
+        const auto it = index.constFind(parameterKey(domain, value_id));
+        if (it != index.cend() && it.value()) {
+            it.value()->setText(kCurrentValueColumn, data);
         }
     }
+
+    tree->setUpdatesEnabled(true);
+}
+
+void AxisWorkspace::onParameterPatchCompleted(int axis_id, bool success, const QString& message) {
+    if (axis_id != axis_id_) {
+        return;
+    }
+
+    setParameterWriteInProgress(false, {});
+    if (success) {
+        readParametersFromDrive();
+        return;
+    }
+
+    QMessageBox::warning(this,
+                         QStringLiteral("Parameter write failed"),
+                         message.isEmpty() ? QStringLiteral("Parameter patch failed. See log for details.") : message);
+}
+
+void AxisWorkspace::onPersistentParameterCompleted(int axis_id, bool success, const QString& message) {
+    if (axis_id != axis_id_) {
+        return;
+    }
+
+    setParameterWriteInProgress(false, {});
+    if (success) {
+        readParametersFromDrive();
+        return;
+    }
+
+    QMessageBox::warning(this,
+                         QStringLiteral("Persistent write failed"),
+                         message.isEmpty() ? QStringLiteral("Persistent parameter write failed. See log for details.") : message);
 }
 
 void AxisWorkspace::onSineToggled(bool enabled) {
@@ -1305,25 +1397,11 @@ void AxisWorkspace::setupUi() {
 
     auto& h = control_panel_->handles();
     connect(h.btn_enable, &QPushButton::clicked, this, [this]() {
-        if (manager_) {
-            QVariantMap command;
-            command.insert(QStringLiteral("kind"), 1);
-            QVariantList batch;
-            batch.push_back(command);
-            QMetaObject::invokeMethod(manager_.data(), "enqueueServiceBatch", Qt::QueuedConnection,
-                                      Q_ARG(int, axis_id_), Q_ARG(QVariantList, batch));
-        }
+        sendServiceCommand(ServiceCommandKind::Enable);
     });
     connect(h.btn_disable, &QPushButton::clicked, this, [this]() {
         onBeforeDisableAxis();
-        if (manager_) {
-            QVariantMap command;
-            command.insert(QStringLiteral("kind"), 2);
-            QVariantList batch;
-            batch.push_back(command);
-            QMetaObject::invokeMethod(manager_.data(), "enqueueServiceBatch", Qt::QueuedConnection,
-                                      Q_ARG(int, axis_id_), Q_ARG(QVariantList, batch));
-        }
+        sendServiceCommand(ServiceCommandKind::Disable);
     });
     connect(h.btn_estop, &QPushButton::clicked, this, [this]() {
         if (manager_) {
@@ -1331,40 +1409,17 @@ void AxisWorkspace::setupUi() {
         }
     });
     connect(h.btn_clear_err, &QPushButton::clicked, this, [this]() {
-        if (manager_) {
-            QVariantMap command;
-            command.insert(QStringLiteral("kind"), 3);
-            QVariantList batch;
-            batch.push_back(command);
-            QMetaObject::invokeMethod(manager_.data(), "enqueueServiceBatch", Qt::QueuedConnection,
-                                      Q_ARG(int, axis_id_), Q_ARG(QVariantList, batch));
-        }
+        sendServiceCommand(ServiceCommandKind::ClearErrors);
     });
     connect(h.btn_home, &QPushButton::clicked, this, [this, &h]() {
         onBeforeHomeAxis();
-        if (manager_) {
-            QVariantMap command;
-            command.insert(QStringLiteral("kind"), 4);
-            const int speed_rpm = h.speed_spin ? h.speed_spin->value() : kDefaultSpeedRpm;
-            command.insert(QStringLiteral("has_profile_speed_rpm"), true);
-            command.insert(QStringLiteral("profile_speed_rpm"), std::clamp(speed_rpm, 0, 3000));
-            QVariantList batch;
-            batch.push_back(command);
-            QMetaObject::invokeMethod(manager_.data(), "enqueueServiceBatch", Qt::QueuedConnection,
-                                      Q_ARG(int, axis_id_), Q_ARG(QVariantList, batch));
-        }
+        const int speed_rpm = h.speed_spin ? h.speed_spin->value() : kDefaultSpeedRpm;
+        sendServiceCommand(ServiceCommandKind::Home, speed_rpm);
     });
     connect(h.btn_set_zero, &QPushButton::clicked, this, [this]() {
         onBeforeSetZeroAxis();
         resetUiAfterSetZero();
-        if (manager_) {
-            QVariantMap command;
-            command.insert(QStringLiteral("kind"), 5);
-            QVariantList batch;
-            batch.push_back(command);
-            QMetaObject::invokeMethod(manager_.data(), "enqueueServiceBatch", Qt::QueuedConnection,
-                                      Q_ARG(int, axis_id_), Q_ARG(QVariantList, batch));
-        }
+        sendServiceCommand(ServiceCommandKind::SetZero);
     });
     connect(h.btn_move, &QPushButton::clicked, this, &AxisWorkspace::triggerAbsoluteMove);
     connect(h.chk_sine_enable, &QCheckBox::toggled, this, &AxisWorkspace::onSineToggled);
@@ -1393,15 +1448,7 @@ void AxisWorkspace::setupUi() {
         desired_target_deg_.store(value, std::memory_order_relaxed);
         commanded_target_deg_.store(value, std::memory_order_relaxed);
         manual_target_hold_until_ms_ = QDateTime::currentMSecsSinceEpoch() + 1200;
-        QVariantMap point;
-        const bool stream_mode = false;
-        point.insert(QStringLiteral("kind"), stream_mode ? 0 : 1);
-        point.insert(QStringLiteral("target_position_deg"), value);
-        point.insert(QStringLiteral("has_profile_speed_rpm"), true);
-        point.insert(QStringLiteral("profile_speed_rpm"), handles.speed_spin ? handles.speed_spin->value() : kDefaultSpeedRpm);
-        point.insert(QStringLiteral("has_profile_accel_percent"), true);
-        point.insert(QStringLiteral("profile_accel_percent"), handles.accel_spin ? handles.accel_spin->value() : kDefaultAccelPercent);
-        point.insert(QStringLiteral("sample_period_sec"), 0.005);
+        QVariantMap point = buildMotionPoint(MotionPointKind::Position, value);
         QVariantList batch;
         batch.push_back(point);
         QMetaObject::invokeMethod(manager_.data(),
@@ -1434,16 +1481,7 @@ void AxisWorkspace::setupUi() {
         }
         auto& handles = control_panel_->handles();
         const double step = handles.jog_step_spin ? handles.jog_step_spin->value() : 1.0;
-        const bool stream_mode = false;
-        QVariantMap point;
-        point.insert(QStringLiteral("kind"), stream_mode ? 0 : 3);
-        point.insert(QStringLiteral("target_position_deg"), -step);
-        point.insert(QStringLiteral("is_relative"), true);
-        point.insert(QStringLiteral("has_profile_speed_rpm"), true);
-        point.insert(QStringLiteral("profile_speed_rpm"), handles.speed_spin ? handles.speed_spin->value() : kDefaultSpeedRpm);
-        point.insert(QStringLiteral("has_profile_accel_percent"), true);
-        point.insert(QStringLiteral("profile_accel_percent"), handles.accel_spin ? handles.accel_spin->value() : kDefaultAccelPercent);
-        point.insert(QStringLiteral("sample_period_sec"), 0.005);
+        QVariantMap point = buildMotionPoint(MotionPointKind::Relative, -step, true);
         QVariantList batch;
         batch.push_back(point);
         QMetaObject::invokeMethod(manager_.data(),
@@ -1458,16 +1496,7 @@ void AxisWorkspace::setupUi() {
         }
         auto& handles = control_panel_->handles();
         const double step = handles.jog_step_spin ? handles.jog_step_spin->value() : 1.0;
-        const bool stream_mode = false;
-        QVariantMap point;
-        point.insert(QStringLiteral("kind"), stream_mode ? 0 : 3);
-        point.insert(QStringLiteral("target_position_deg"), step);
-        point.insert(QStringLiteral("is_relative"), true);
-        point.insert(QStringLiteral("has_profile_speed_rpm"), true);
-        point.insert(QStringLiteral("profile_speed_rpm"), handles.speed_spin ? handles.speed_spin->value() : kDefaultSpeedRpm);
-        point.insert(QStringLiteral("has_profile_accel_percent"), true);
-        point.insert(QStringLiteral("profile_accel_percent"), handles.accel_spin ? handles.accel_spin->value() : kDefaultAccelPercent);
-        point.insert(QStringLiteral("sample_period_sec"), 0.005);
+        QVariantMap point = buildMotionPoint(MotionPointKind::Relative, step, true);
         QVariantList batch;
         batch.push_back(point);
         QMetaObject::invokeMethod(manager_.data(),
@@ -1598,14 +1627,35 @@ void AxisWorkspace::setParameterReadInProgress(bool in_progress) {
 
     auto& cfg = config_panel_->handles();
     if (cfg.btn_read_params) {
-        cfg.btn_read_params->setEnabled(!in_progress);
+        cfg.btn_read_params->setEnabled(!in_progress && !parameter_write_in_progress_);
         cfg.btn_read_params->setText(in_progress ? QStringLiteral("Reading...") : QStringLiteral("Read Values"));
     }
     if (cfg.btn_apply_params) {
-        cfg.btn_apply_params->setEnabled(!in_progress);
+        cfg.btn_apply_params->setEnabled(!in_progress && !parameter_write_in_progress_);
     }
     if (cfg.btn_save_drive_flash) {
-        cfg.btn_save_drive_flash->setEnabled(!in_progress);
+        cfg.btn_save_drive_flash->setEnabled(!in_progress && !parameter_write_in_progress_);
+    }
+}
+
+void AxisWorkspace::setParameterWriteInProgress(bool in_progress, const QString& operation_text) {
+    parameter_write_in_progress_ = in_progress;
+    if (!config_panel_) {
+        return;
+    }
+
+    auto& cfg = config_panel_->handles();
+    if (cfg.btn_read_params) {
+        cfg.btn_read_params->setEnabled(!in_progress && !parameter_read_in_progress_);
+    }
+    if (cfg.btn_apply_params) {
+        cfg.btn_apply_params->setEnabled(!in_progress && !parameter_read_in_progress_);
+        cfg.btn_apply_params->setText(in_progress && !operation_text.isEmpty()
+            ? operation_text
+            : QStringLiteral("Apply Changes"));
+    }
+    if (cfg.btn_save_drive_flash) {
+        cfg.btn_save_drive_flash->setEnabled(!in_progress && !parameter_read_in_progress_);
     }
 }
 
@@ -1637,39 +1687,13 @@ void AxisWorkspace::triggerAbsoluteMove() {
 
     auto& h = control_panel_->handles();
     const double target = h.target_pos_spin ? h.target_pos_spin->value() : 0.0;
-    const bool stream_mode = false;
     desired_target_deg_.store(target, std::memory_order_relaxed);
     commanded_target_deg_.store(target, std::memory_order_relaxed);
     manual_target_hold_until_ms_ = QDateTime::currentMSecsSinceEpoch() + 1200;
 
-    if (h.radio_move_rel && h.radio_move_rel->isChecked()) {
-        QVariantMap point;
-        point.insert(QStringLiteral("kind"), stream_mode ? 0 : 3);
-        point.insert(QStringLiteral("target_position_deg"), target);
-        point.insert(QStringLiteral("is_relative"), true);
-        point.insert(QStringLiteral("has_profile_speed_rpm"), true);
-        point.insert(QStringLiteral("profile_speed_rpm"), h.speed_spin ? h.speed_spin->value() : kDefaultSpeedRpm);
-        point.insert(QStringLiteral("has_profile_accel_percent"), true);
-        point.insert(QStringLiteral("profile_accel_percent"), h.accel_spin ? h.accel_spin->value() : kDefaultAccelPercent);
-        point.insert(QStringLiteral("sample_period_sec"), 0.005);
-        QVariantList batch;
-        batch.push_back(point);
-        QMetaObject::invokeMethod(manager_.data(),
-                                  "enqueueMotionBatch",
-                                  Qt::QueuedConnection,
-                                  Q_ARG(int, axis_id_),
-                                  Q_ARG(QVariantList, batch));
-        return;
-    }
-
-    QVariantMap point;
-    point.insert(QStringLiteral("kind"), stream_mode ? 0 : 1);
-    point.insert(QStringLiteral("target_position_deg"), target);
-    point.insert(QStringLiteral("has_profile_speed_rpm"), true);
-    point.insert(QStringLiteral("profile_speed_rpm"), h.speed_spin ? h.speed_spin->value() : kDefaultSpeedRpm);
-    point.insert(QStringLiteral("has_profile_accel_percent"), true);
-    point.insert(QStringLiteral("profile_accel_percent"), h.accel_spin ? h.accel_spin->value() : kDefaultAccelPercent);
-    point.insert(QStringLiteral("sample_period_sec"), 0.005);
+    const bool is_relative = h.radio_move_rel && h.radio_move_rel->isChecked();
+    const MotionPointKind kind = is_relative ? MotionPointKind::Relative : MotionPointKind::Position;
+    QVariantMap point = buildMotionPoint(kind, target, is_relative);
     QVariantList batch;
     batch.push_back(point);
     QMetaObject::invokeMethod(manager_.data(),
@@ -1682,7 +1706,50 @@ void AxisWorkspace::triggerAbsoluteMove() {
 bool AxisWorkspace::isTargetReached(double tolerance_deg) const {
     return std::abs(desired_target_deg_.load(std::memory_order_relaxed) - displayed_actual_deg_) <= tolerance_deg;
 }
-#include "motion_core/types.h"
+
+void AxisWorkspace::resetDropTracking() {
+    drop_baseline_initialized_ = false;
+    sine_stopped_due_to_drops_ = false;
+    last_driver_dropped_ = 0U;
+}
+
+void AxisWorkspace::sendServiceCommand(ServiceCommandKind kind, int profile_speed_rpm) {
+    if (!manager_) {
+        return;
+    }
+    QVariantMap command;
+    command.insert(QStringLiteral("kind"), static_cast<int>(kind));
+    if (kind == ServiceCommandKind::Home && profile_speed_rpm > 0) {
+        command.insert(QStringLiteral("has_profile_speed_rpm"), true);
+        command.insert(QStringLiteral("profile_speed_rpm"), std::clamp(profile_speed_rpm, 0, 3000));
+    }
+    QVariantList batch;
+    batch.push_back(command);
+    QMetaObject::invokeMethod(manager_.data(),
+                              "enqueueServiceBatch",
+                              Qt::QueuedConnection,
+                              Q_ARG(int, axis_id_),
+                              Q_ARG(QVariantList, batch));
+}
+
+QVariantMap AxisWorkspace::buildMotionPoint(MotionPointKind kind, double target_deg, bool is_relative) const {
+    QVariantMap point;
+    point.insert(QStringLiteral("kind"), static_cast<int>(kind));
+    point.insert(QStringLiteral("target_position_deg"), target_deg);
+    if (is_relative) {
+        point.insert(QStringLiteral("is_relative"), true);
+    }
+    const int speed = control_panel_ && control_panel_->handles().speed_spin
+        ? control_panel_->handles().speed_spin->value() : kDefaultSpeedRpm;
+    const int accel = control_panel_ && control_panel_->handles().accel_spin
+        ? control_panel_->handles().accel_spin->value() : kDefaultAccelPercent;
+    point.insert(QStringLiteral("has_profile_speed_rpm"), true);
+    point.insert(QStringLiteral("profile_speed_rpm"), speed);
+    point.insert(QStringLiteral("has_profile_accel_percent"), true);
+    point.insert(QStringLiteral("profile_accel_percent"), accel);
+    point.insert(QStringLiteral("sample_period_sec"), samplePeriodSec());
+    return point;
+}
 
 motion_core::AxisTransportKind AxisWorkspace::getTransportKind() const {
     if (!manager_) return motion_core::AxisTransportKind::CanBus;
@@ -1696,7 +1763,7 @@ QString AxisWorkspace::transportTag() const {
 }
 
 double AxisWorkspace::samplePeriodSec() const {
-    return getTransportKind() == motion_core::AxisTransportKind::Ethercat ? 0.004 : 0.004; // Both use 4ms
+    return 0.004;
 }
 
 bool AxisWorkspace::transportOwnsTargetUi() const {
@@ -1729,15 +1796,13 @@ void AxisWorkspace::disableSineMode() {
     onTransportSineToggled(false);
 }
 
-void AxisWorkspace::disableSineUiState() {
-    disableSineMode();
-}
+
 
 void AxisWorkspace::updateSineControlsAvailability() {
     const bool enabled = supportsSineMode();
     const QString tool_tip = enabled ? QString() : QStringLiteral("Sine mode is available only in Cyclic Sync Position / Cyclic Sync Velocity modes.");
     setSineControlsEnabled(enabled, tool_tip);
-    if (!enabled) disableSineUiState();
+    if (!enabled) disableSineMode();
 }
 
 void AxisWorkspace::configureTransportUi() {
@@ -1766,7 +1831,7 @@ void AxisWorkspace::configureTransportUi() {
 void AxisWorkspace::onTransportSineToggled(bool enabled) {
     if (getTransportKind() == motion_core::AxisTransportKind::Ethercat) {
         if (enabled && !supportsSineMode()) {
-            disableSineUiState();
+            disableSineMode();
             return;
         }
     }
@@ -1779,10 +1844,7 @@ void AxisWorkspace::onTransportSineToggled(bool enabled) {
         pending_refill_points_ = 0U;
         driver_queue_size_.store(0U, std::memory_order_release);
         if (getTransportKind() == motion_core::AxisTransportKind::Ethercat) {
-            drop_baseline_initialized_ = false;
-            sine_stopped_due_to_drops_ = false;
-            last_driver_dropped_ = 0U;
-            last_driver_mode_ = std::numeric_limits<std::uint64_t>::max();
+            resetDropTracking();
         } else {
             resetScopeDeadband();
         }
@@ -1795,23 +1857,18 @@ void AxisWorkspace::onTransportSineToggled(bool enabled) {
         scope_target_time_cursor_initialized_ = false;
 
         ensureMotionQueueConfigured();
-        QVariantMap command; command.insert(QStringLiteral("kind"), 0); QVariantList batch; batch.push_back(command);
-        QMetaObject::invokeMethod(manager_.data(), "enqueueServiceBatch", Qt::QueuedConnection, Q_ARG(int, axis_id_), Q_ARG(QVariantList, batch));
+        sendServiceCommand(ServiceCommandKind::ClearMotionQueue);
         return;
     }
 
     motion_queue_prefilled_ = false;
     pending_refill_points_ = 0U;
     if (getTransportKind() == motion_core::AxisTransportKind::Ethercat) {
-        drop_baseline_initialized_ = false;
-        sine_stopped_due_to_drops_ = false;
-        last_driver_dropped_ = 0U;
-        last_driver_mode_ = std::numeric_limits<std::uint64_t>::max();
+        resetDropTracking();
     } else {
         resetScopeDeadband();
     }
-    QVariantMap command; command.insert(QStringLiteral("kind"), 0); QVariantList batch; batch.push_back(command);
-    QMetaObject::invokeMethod(manager_.data(), "enqueueServiceBatch", Qt::QueuedConnection, Q_ARG(int, axis_id_), Q_ARG(QVariantList, batch));
+    sendServiceCommand(ServiceCommandKind::ClearMotionQueue);
     scope_target_time_cursor_sec_ = 0.0;
     scope_target_time_cursor_initialized_ = false;
     desired_target_deg_.store(commanded_target_deg_.load(std::memory_order_relaxed), std::memory_order_relaxed);
@@ -1842,7 +1899,7 @@ void AxisWorkspace::onTransportMotionQueueStatsUpdated(const QVariantMap& stats)
                 const QString message = QStringLiteral("EtherCAT Axis %1: motion queue drops detected (%2 new). Stopping sine producer.").arg(axis_id_).arg(new_dropped);
                 auto* m = manager_.data();
                 QMetaObject::invokeMethod(m, [m, message]() { if (m) emit m->logMessage(QStringLiteral("ecat"), message); }, Qt::QueuedConnection);
-                disableSineUiState();
+                disableSineMode();
                 last_driver_dropped_ = dropped;
                 return;
             }
@@ -1950,3 +2007,377 @@ void AxisWorkspace::onBeforeSetZeroAxis() {
     if (getTransportKind() == motion_core::AxisTransportKind::CanBus) resetScopeDeadband();
     clearMotionBuffersForServiceCommand(true);
 }
+
+
+namespace {
+
+class NewValueColumnDelegate final : public QStyledItemDelegate {
+public:
+    explicit NewValueColumnDelegate(QObject* parent = nullptr)
+        : QStyledItemDelegate(parent) {}
+
+    QWidget* createEditor(QWidget* parent,
+                          const QStyleOptionViewItem& option,
+                          const QModelIndex& index) const override {
+        if (index.column() != kNewValueColumn) {
+            return nullptr;
+        }
+
+        const QString read_only = index.sibling(index.row(), kReadOnlyColumn).data(Qt::DisplayRole).toString();
+        if (read_only.compare(QStringLiteral("Yes"), Qt::CaseInsensitive) == 0 ||
+            read_only.compare(QStringLiteral("N/A"), Qt::CaseInsensitive) == 0) {
+            return nullptr;
+        }
+
+        return QStyledItemDelegate::createEditor(parent, option, index);
+    }
+};
+
+} // namespace
+
+AxisWorkspaceConfigPanel::AxisWorkspaceConfigPanel(QWidget* parent)
+    : QWidget(parent) {
+    auto* root_layout = new QVBoxLayout(this);
+    root_layout->setContentsMargins(0, 0, 0, 0);
+
+    auto* scroll = new QScrollArea(this);
+    scroll->setWidgetResizable(true);
+    scroll->setFrameShape(QFrame::NoFrame);
+
+    auto* scroll_content = new QWidget(scroll);
+    auto* layout = new QVBoxLayout(scroll_content);
+
+    auto* btn_row = new QHBoxLayout();
+    handles_.btn_refresh_list = new QPushButton(QStringLiteral("Refresh List"), scroll_content);
+    handles_.btn_read_params = new QPushButton(QStringLiteral("Read Values"), scroll_content);
+    handles_.btn_apply_params = new QPushButton(QStringLiteral("Apply Changes"), scroll_content);
+    handles_.btn_save_drive_flash = new QPushButton(QStringLiteral("Save Selected Persistently"), scroll_content);
+    handles_.btn_export_full = new QPushButton(QStringLiteral("Export Config (AxisConfig)"), scroll_content);
+    handles_.btn_import_full = new QPushButton(QStringLiteral("Import Config (AxisConfig)"), scroll_content);
+    btn_row->addWidget(handles_.btn_refresh_list);
+    btn_row->addWidget(handles_.btn_read_params);
+    btn_row->addWidget(handles_.btn_apply_params);
+    btn_row->addWidget(handles_.btn_save_drive_flash);
+    btn_row->addWidget(handles_.btn_export_full);
+    btn_row->addWidget(handles_.btn_import_full);
+    btn_row->addStretch();
+    layout->addLayout(btn_row);
+
+    auto* cfg_note = new QLabel(
+        QStringLiteral("<b>Config model:</b> AxisConfig import/export is the canonical configuration flow."),
+        scroll_content);
+    cfg_note->setWordWrap(true);
+    layout->addWidget(cfg_note);
+
+    auto* split = new QSplitter(Qt::Horizontal, scroll_content);
+
+    handles_.config_tree = new QTreeWidget(split);
+    handles_.config_tree->setColumnCount(6);
+    handles_.config_tree->setHeaderLabels({QStringLiteral("Name"),
+                                           QStringLiteral("Group"),
+                                           QStringLiteral("Unit"),
+                                           QStringLiteral("Read Only"),
+                                           QStringLiteral("Current Value"),
+                                           QStringLiteral("New Value")});
+    handles_.config_tree->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    handles_.config_tree->header()->setSectionResizeMode(0, QHeaderView::Stretch);
+    handles_.config_tree->setSelectionBehavior(QAbstractItemView::SelectRows);
+    handles_.config_tree->setSelectionMode(QAbstractItemView::SingleSelection);
+    handles_.config_tree->setEditTriggers(QAbstractItemView::DoubleClicked |
+                                          QAbstractItemView::SelectedClicked |
+                                          QAbstractItemView::EditKeyPressed);
+    handles_.config_tree->setItemDelegateForColumn(kNewValueColumn,
+                                                   new NewValueColumnDelegate(handles_.config_tree));
+
+    handles_.txt_description = new QTextEdit(split);
+    handles_.txt_description->setReadOnly(true);
+    handles_.txt_description->setPlaceholderText(QStringLiteral("Select a parameter to view its details..."));
+
+    split->setSizes({600, 200});
+    layout->addWidget(split, 1);
+
+    scroll->setWidget(scroll_content);
+    root_layout->addWidget(scroll);
+}
+
+const AxisWorkspaceConfigPanel::Handles& AxisWorkspaceConfigPanel::handles() const noexcept {
+    return handles_;
+}
+
+class QEvent;
+
+namespace {
+
+QLabel* make_value_label(QWidget* parent, const QString& text = QStringLiteral("---")) {
+    auto* label = new QLabel(text, parent);
+    label->setMinimumWidth(96);
+    label->setWordWrap(true);
+    return label;
+}
+
+class WheelEventFilter final : public QObject {
+public:
+    explicit WheelEventFilter(QObject* parent = nullptr)
+        : QObject(parent) {}
+
+protected:
+    bool eventFilter(QObject* watched, QEvent* event) override;
+};
+
+bool WheelEventFilter::eventFilter(QObject* watched, QEvent* event) {
+    if (!event) {
+        return QObject::eventFilter(watched, event);
+    }
+
+    if (event->type() == QEvent::Wheel) {
+        auto* widget = qobject_cast<QWidget*>(watched);
+        if (widget && !widget->hasFocus()) {
+            return true;
+        }
+        if (qobject_cast<QAbstractSpinBox*>(watched)) {
+            return true;
+        }
+    }
+
+    return QObject::eventFilter(watched, event);
+}
+
+} // namespace
+
+AxisWorkspaceControlPanel::AxisWorkspaceControlPanel(QWidget* parent)
+    : QWidget(parent) {
+    auto* root = new QVBoxLayout(this);
+    root->setContentsMargins(0, 0, 0, 0);
+
+    auto* scroll = new QScrollArea(this);
+    scroll->setWidgetResizable(true);
+    scroll->setFrameShape(QFrame::NoFrame);
+    root->addWidget(scroll);
+
+    auto* content = new QWidget(scroll);
+    auto* layout = new QVBoxLayout(content);
+    auto* wheel_filter = new WheelEventFilter(this);
+
+    auto* actions_group = new QGroupBox(QStringLiteral("Actions"), content);
+    auto* actions_row = new QHBoxLayout(actions_group);
+    handles_.btn_enable = new QPushButton(QStringLiteral("ENABLE"), actions_group);
+    handles_.btn_disable = new QPushButton(QStringLiteral("DISABLE"), actions_group);
+    handles_.btn_clear_err = new QPushButton(QStringLiteral("CLEAR ERRORS"), actions_group);
+    handles_.btn_set_zero = new QPushButton(QStringLiteral("SET ZERO"), actions_group);
+    handles_.btn_home = new QPushButton(QStringLiteral("GO HOME"), actions_group);
+    handles_.btn_estop = new QPushButton(QStringLiteral("E-STOP"), actions_group);
+    handles_.btn_enable->setStyleSheet(QStringLiteral("background-color: #2ea043; color: white; font-weight: bold;"));
+    handles_.btn_disable->setStyleSheet(QStringLiteral("background-color: #da3633; color: white; font-weight: bold;"));
+    handles_.btn_clear_err->setStyleSheet(QStringLiteral("background-color: #d29922; color: black;"));
+    handles_.btn_estop->setStyleSheet(QStringLiteral("background-color: #da3633; color: white; font-weight: bold; padding: 8px;"));
+    actions_row->addWidget(handles_.btn_enable);
+    actions_row->addWidget(handles_.btn_disable);
+    actions_row->addWidget(handles_.btn_clear_err);
+    actions_row->addWidget(handles_.btn_set_zero);
+    actions_row->addWidget(handles_.btn_home);
+    actions_row->addSpacing(12);
+    actions_row->addWidget(handles_.btn_estop);
+    actions_row->addStretch();
+    layout->addWidget(actions_group);
+
+    auto* top_row = new QHBoxLayout();
+
+    auto* motion_group = new QGroupBox(QStringLiteral("Basic Motion"), content);
+    auto* motion_form = new QFormLayout(motion_group);
+
+
+    handles_.speed_spin = new QSpinBox(motion_group);
+    handles_.speed_spin->setRange(0, 3000);
+    handles_.speed_spin->setValue(1800);
+    handles_.speed_spin->setSuffix(QStringLiteral(" RPM"));
+    handles_.speed_spin->setFixedWidth(170);
+    handles_.speed_spin->installEventFilter(wheel_filter);
+
+    handles_.accel_spin = new QSpinBox(motion_group);
+    handles_.accel_spin->setRange(0, 100);
+    handles_.accel_spin->setValue(100);
+    handles_.accel_spin->setSuffix(QStringLiteral(" %"));
+    handles_.accel_spin->setFixedWidth(170);
+    handles_.accel_spin->installEventFilter(wheel_filter);
+
+    handles_.target_pos_spin = new QDoubleSpinBox(motion_group);
+    handles_.target_pos_spin->setRange(-1'000'000.0, 1'000'000.0);
+    handles_.target_pos_spin->setDecimals(2);
+    handles_.target_pos_spin->setValue(0.0);
+    handles_.target_pos_spin->setAlignment(Qt::AlignRight);
+    handles_.target_pos_spin->setButtonSymbols(QAbstractSpinBox::NoButtons);
+    handles_.target_pos_spin->setKeyboardTracking(false);
+    handles_.target_pos_spin->setFixedWidth(170);
+    handles_.target_pos_spin->installEventFilter(wheel_filter);
+
+    handles_.target_slider = new QSlider(Qt::Horizontal, motion_group);
+    handles_.target_slider->setRange(-360000, 360000);
+    handles_.target_slider->setSingleStep(1);
+    handles_.target_slider->setPageStep(100);
+
+    auto* move_type_row = new QWidget(motion_group);
+    auto* move_type_layout = new QHBoxLayout(move_type_row);
+    move_type_layout->setContentsMargins(0, 0, 0, 0);
+    handles_.radio_move_abs = new QRadioButton(QStringLiteral("Abs"), move_type_row);
+    handles_.radio_move_rel = new QRadioButton(QStringLiteral("Rel"), move_type_row);
+    handles_.radio_move_abs->setChecked(true);
+    move_type_layout->addWidget(handles_.radio_move_abs);
+    move_type_layout->addWidget(handles_.radio_move_rel);
+    move_type_layout->addStretch();
+
+    handles_.btn_move = new QPushButton(QStringLiteral("Move"), motion_group);
+    handles_.chk_sine_enable = new QCheckBox(QStringLiteral("Enable Sine Mode"), motion_group);
+
+    handles_.spin_sine_amp = new QDoubleSpinBox(motion_group);
+    handles_.spin_sine_amp->setRange(0.1, 360000.0);
+    handles_.spin_sine_amp->setValue(20.0);
+    handles_.spin_sine_amp->setSuffix(QStringLiteral(" deg"));
+    handles_.spin_sine_amp->setFixedWidth(170);
+    handles_.spin_sine_amp->installEventFilter(wheel_filter);
+
+    handles_.spin_sine_freq = new QDoubleSpinBox(motion_group);
+    handles_.spin_sine_freq->setRange(0.01, 50.0);
+    handles_.spin_sine_freq->setDecimals(3);
+    handles_.spin_sine_freq->setValue(0.5);
+    handles_.spin_sine_freq->setSuffix(QStringLiteral(" Hz"));
+    handles_.spin_sine_freq->setFixedWidth(170);
+    handles_.spin_sine_freq->installEventFilter(wheel_filter);
+
+    handles_.jog_step_spin = new QDoubleSpinBox(motion_group);
+    handles_.jog_step_spin->setRange(0.01, 360.0);
+    handles_.jog_step_spin->setValue(1.0);
+    handles_.jog_step_spin->setSuffix(QStringLiteral("°"));
+    handles_.jog_step_spin->installEventFilter(wheel_filter);
+
+    auto* jog_row = new QWidget(motion_group);
+    auto* jog_layout = new QHBoxLayout(jog_row);
+    jog_layout->setContentsMargins(0, 0, 0, 0);
+    handles_.btn_jog_neg = new QPushButton(QStringLiteral("Jog -"), jog_row);
+    handles_.btn_jog_pos = new QPushButton(QStringLiteral("Jog +"), jog_row);
+    jog_layout->addWidget(handles_.btn_jog_neg);
+    jog_layout->addWidget(handles_.btn_jog_pos);
+    jog_layout->addStretch();
+
+
+    motion_form->addRow(QStringLiteral("Speed:"), handles_.speed_spin);
+    motion_form->addRow(QStringLiteral("Accel:"), handles_.accel_spin);
+    motion_form->addRow(QStringLiteral("Target Position:"), handles_.target_pos_spin);
+    motion_form->addRow(QStringLiteral("Live Target:"), handles_.target_slider);
+    motion_form->addRow(QStringLiteral("Move Type:"), move_type_row);
+    motion_form->addRow(QString(), handles_.btn_move);
+    motion_form->addRow(QString(), handles_.chk_sine_enable);
+    motion_form->addRow(QStringLiteral("Sine Amplitude:"), handles_.spin_sine_amp);
+    motion_form->addRow(QStringLiteral("Sine Frequency:"), handles_.spin_sine_freq);
+    motion_form->addRow(QStringLiteral("Jog step:"), handles_.jog_step_spin);
+    motion_form->addRow(QString(), jog_row);
+    top_row->addWidget(motion_group, 3);
+
+    auto* telemetry_group = new QGroupBox(QStringLiteral("Telemetry (Live)"), content);
+    auto* telemetry_form = new QFormLayout(telemetry_group);
+    handles_.lbl_sys_state = make_value_label(telemetry_group, QStringLiteral("N/A"));
+    handles_.lbl_state = make_value_label(telemetry_group, QStringLiteral("N/A"));
+    handles_.lbl_homing_sequence = make_value_label(telemetry_group, QStringLiteral("Idle"));
+    handles_.lbl_protection = make_value_label(telemetry_group, QStringLiteral("N/A"));
+    handles_.lbl_error_code = make_value_label(telemetry_group, QStringLiteral("N/A"));
+    handles_.lbl_digital_inputs = make_value_label(telemetry_group, QStringLiteral("N/A"));
+    handles_.lbl_axis = make_value_label(telemetry_group, QStringLiteral("N/A"));
+    handles_.lbl_target = make_value_label(telemetry_group, QStringLiteral("N/A"));
+    handles_.lbl_speed = make_value_label(telemetry_group, QStringLiteral("N/A"));
+    handles_.lbl_torque = make_value_label(telemetry_group, QStringLiteral("N/A"));
+    handles_.lbl_cmd_tx_rate_title = new QLabel(QStringLiteral("Control Cycle:"), telemetry_group);
+    handles_.lbl_telemetry_rate_title = new QLabel(QStringLiteral("Telemetry Cycle:"), telemetry_group);
+    handles_.lbl_position_rx_rate_title = new QLabel(QStringLiteral("Position RX Cycle:"), telemetry_group);
+    handles_.lbl_cmd_tx_rate = make_value_label(telemetry_group, QStringLiteral("N/A"));
+    handles_.lbl_telemetry_rate = make_value_label(telemetry_group, QStringLiteral("N/A"));
+    handles_.lbl_position_rx_rate = make_value_label(telemetry_group, QStringLiteral("N/A"));
+    handles_.lbl_speed_rx_rate = make_value_label(telemetry_group, QStringLiteral("N/A"));
+    handles_.lbl_status_rx_rate = make_value_label(telemetry_group, QStringLiteral("N/A"));
+    handles_.lbl_protection_rx_rate = make_value_label(telemetry_group, QStringLiteral("N/A"));
+    handles_.lbl_motion_queue_stats = make_value_label(
+        telemetry_group,
+        QStringLiteral("queue: size=0 / 0, pushed=0, dropped=0, underruns=0, short_starts=0"));
+
+    telemetry_form->addRow(QStringLiteral("System State:"), handles_.lbl_sys_state);
+    telemetry_form->addRow(QStringLiteral("Motor Status:"), handles_.lbl_state);
+    telemetry_form->addRow(QStringLiteral("Homing Sequence:"), handles_.lbl_homing_sequence);
+    telemetry_form->addRow(QStringLiteral("Protection:"), handles_.lbl_protection);
+    telemetry_form->addRow(QStringLiteral("Error Code:"), handles_.lbl_error_code);
+    telemetry_form->addRow(QStringLiteral("Digital Inputs:"), handles_.lbl_digital_inputs);
+    telemetry_form->addRow(QStringLiteral("Actual Pos:"), handles_.lbl_axis);
+    telemetry_form->addRow(QStringLiteral("Target Pos:"), handles_.lbl_target);
+    telemetry_form->addRow(QStringLiteral("Speed:"), handles_.lbl_speed);
+    telemetry_form->addRow(QStringLiteral("Torque:"), handles_.lbl_torque);
+    telemetry_form->addRow(handles_.lbl_cmd_tx_rate_title, handles_.lbl_cmd_tx_rate);
+    telemetry_form->addRow(handles_.lbl_telemetry_rate_title, handles_.lbl_telemetry_rate);
+    telemetry_form->addRow(handles_.lbl_position_rx_rate_title, handles_.lbl_position_rx_rate);
+    telemetry_form->addRow(QStringLiteral("Speed RX Rate:"), handles_.lbl_speed_rx_rate);
+    telemetry_form->addRow(QStringLiteral("Status RX Rate:"), handles_.lbl_status_rx_rate);
+    telemetry_form->addRow(QStringLiteral("Protection RX Rate:"), handles_.lbl_protection_rx_rate);
+    telemetry_form->addRow(QStringLiteral("Queue Stats:"), handles_.lbl_motion_queue_stats);
+    top_row->addWidget(telemetry_group, 2);
+
+    layout->addLayout(top_row);
+
+    auto* plot_group = new QGroupBox(QStringLiteral("Real-time Monitor"), content);
+    auto* plot_layout = new QVBoxLayout(plot_group);
+    auto* scope_controls = new QHBoxLayout();
+    scope_controls->addWidget(new QLabel(QStringLiteral("Signal:"), plot_group));
+    handles_.cmb_scope_signal = new QComboBox(plot_group);
+    handles_.cmb_scope_signal->addItems({QStringLiteral("Position (deg)"),
+                                         QStringLiteral("Velocity (deg/s)"),
+                                         QStringLiteral("Torque (%)")});
+    scope_controls->addWidget(handles_.cmb_scope_signal);
+
+    scope_controls->addWidget(new QLabel(QStringLiteral("Time Window:"), plot_group));
+    handles_.sld_scope_time = new QSlider(Qt::Horizontal, plot_group);
+    handles_.sld_scope_time->setRange(2, 60);
+    handles_.sld_scope_time->setValue(10);
+    handles_.sld_scope_time->setFixedWidth(140);
+    handles_.lbl_scope_time = new QLabel(QStringLiteral("10 s"), plot_group);
+    scope_controls->addWidget(handles_.sld_scope_time);
+    scope_controls->addWidget(handles_.lbl_scope_time);
+
+    handles_.chk_plot_actual_pos = new QCheckBox(QStringLiteral("Actual"), plot_group);
+    handles_.chk_plot_actual_pos->setChecked(true);
+    handles_.chk_plot_target_pos = new QCheckBox(QStringLiteral("Target"), plot_group);
+    handles_.chk_plot_target_pos->setChecked(true);
+    handles_.chk_plot_actual_vel = new QCheckBox(QStringLiteral("Actual Vel"), plot_group);
+    handles_.chk_plot_target_vel = new QCheckBox(QStringLiteral("Target Vel"), plot_group);
+    handles_.chk_plot_pos_error = new QCheckBox(QStringLiteral("Pos Error"), plot_group);
+    handles_.chk_auto_scale = new QCheckBox(QStringLiteral("Auto Scale"), plot_group);
+    handles_.chk_auto_scale->setChecked(true);
+    scope_controls->addWidget(handles_.chk_plot_actual_pos);
+    scope_controls->addWidget(handles_.chk_plot_target_pos);
+    scope_controls->addWidget(handles_.chk_plot_actual_vel);
+    scope_controls->addWidget(handles_.chk_plot_target_vel);
+    scope_controls->addWidget(handles_.chk_plot_pos_error);
+    scope_controls->addWidget(handles_.chk_auto_scale);
+    scope_controls->addStretch();
+    plot_layout->addLayout(scope_controls);
+
+    handles_.scope = new RDT::ScopeWidget(plot_group);
+    handles_.scope->setMinimumHeight(240);
+    handles_.scope->setXRange(10.0);
+    handles_.scope->setAutoRange(true);
+    handles_.scope->addChannel(QStringLiteral("actual"), QColor(80, 200, 255));
+    handles_.scope->addChannel(QStringLiteral("target"), QColor(255, 80, 80));
+    handles_.scope->addChannel(QStringLiteral("speed"), QColor(255, 180, 80));
+    handles_.scope->addChannel(QStringLiteral("target_speed"), QColor(180, 255, 120));
+    handles_.scope->addChannel(QStringLiteral("pos_error"), QColor(255, 120, 255));
+    handles_.scope->addChannel(QStringLiteral("torque"), QColor(180, 140, 255));
+    plot_layout->addWidget(handles_.scope, 1);
+
+    layout->addStretch(1);
+    layout->addWidget(plot_group, 0, Qt::AlignBottom);
+
+    scroll->setWidget(content);
+}
+
+const AxisWorkspaceControlPanel::Handles& AxisWorkspaceControlPanel::handles() const noexcept {
+    return handles_;
+}
+
+
+
+
+

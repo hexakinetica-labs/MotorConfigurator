@@ -143,140 +143,275 @@ motion_core_no_hw/fast:
 	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core_no_hw.dir\build.make motion_core_build/CMakeFiles/motion_core_no_hw.dir/build
 .PHONY : motion_core_no_hw/fast
 
-src/config/axis_config_json.obj: src/config/axis_config_json.cpp.obj
-.PHONY : src/config/axis_config_json.obj
+axis_config_json.obj: axis_config_json.cpp.obj
+.PHONY : axis_config_json.obj
 
 # target to build an object file
-src/config/axis_config_json.cpp.obj:
-	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core.dir\build.make motion_core_build/CMakeFiles/motion_core.dir/src/config/axis_config_json.cpp.obj
-	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core_no_hw.dir\build.make motion_core_build/CMakeFiles/motion_core_no_hw.dir/src/config/axis_config_json.cpp.obj
-.PHONY : src/config/axis_config_json.cpp.obj
+axis_config_json.cpp.obj:
+	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core.dir\build.make motion_core_build/CMakeFiles/motion_core.dir/axis_config_json.cpp.obj
+	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core_no_hw.dir\build.make motion_core_build/CMakeFiles/motion_core_no_hw.dir/axis_config_json.cpp.obj
+.PHONY : axis_config_json.cpp.obj
 
-src/config/axis_config_json.i: src/config/axis_config_json.cpp.i
-.PHONY : src/config/axis_config_json.i
+axis_config_json.i: axis_config_json.cpp.i
+.PHONY : axis_config_json.i
 
 # target to preprocess a source file
-src/config/axis_config_json.cpp.i:
-	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core.dir\build.make motion_core_build/CMakeFiles/motion_core.dir/src/config/axis_config_json.cpp.i
-	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core_no_hw.dir\build.make motion_core_build/CMakeFiles/motion_core_no_hw.dir/src/config/axis_config_json.cpp.i
-.PHONY : src/config/axis_config_json.cpp.i
+axis_config_json.cpp.i:
+	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core.dir\build.make motion_core_build/CMakeFiles/motion_core.dir/axis_config_json.cpp.i
+	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core_no_hw.dir\build.make motion_core_build/CMakeFiles/motion_core_no_hw.dir/axis_config_json.cpp.i
+.PHONY : axis_config_json.cpp.i
 
-src/config/axis_config_json.s: src/config/axis_config_json.cpp.s
-.PHONY : src/config/axis_config_json.s
+axis_config_json.s: axis_config_json.cpp.s
+.PHONY : axis_config_json.s
 
 # target to generate assembly for a file
-src/config/axis_config_json.cpp.s:
-	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core.dir\build.make motion_core_build/CMakeFiles/motion_core.dir/src/config/axis_config_json.cpp.s
-	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core_no_hw.dir\build.make motion_core_build/CMakeFiles/motion_core_no_hw.dir/src/config/axis_config_json.cpp.s
-.PHONY : src/config/axis_config_json.cpp.s
+axis_config_json.cpp.s:
+	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core.dir\build.make motion_core_build/CMakeFiles/motion_core.dir/axis_config_json.cpp.s
+	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core_no_hw.dir\build.make motion_core_build/CMakeFiles/motion_core_no_hw.dir/axis_config_json.cpp.s
+.PHONY : axis_config_json.cpp.s
 
-src/config/hal_runtime_config_json.obj: src/config/hal_runtime_config_json.cpp.obj
-.PHONY : src/config/hal_runtime_config_json.obj
+config_manager.obj: config_manager.cpp.obj
+.PHONY : config_manager.obj
 
 # target to build an object file
-src/config/hal_runtime_config_json.cpp.obj:
-	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core.dir\build.make motion_core_build/CMakeFiles/motion_core.dir/src/config/hal_runtime_config_json.cpp.obj
-	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core_no_hw.dir\build.make motion_core_build/CMakeFiles/motion_core_no_hw.dir/src/config/hal_runtime_config_json.cpp.obj
-.PHONY : src/config/hal_runtime_config_json.cpp.obj
+config_manager.cpp.obj:
+	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core.dir\build.make motion_core_build/CMakeFiles/motion_core.dir/config_manager.cpp.obj
+	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core_no_hw.dir\build.make motion_core_build/CMakeFiles/motion_core_no_hw.dir/config_manager.cpp.obj
+.PHONY : config_manager.cpp.obj
 
-src/config/hal_runtime_config_json.i: src/config/hal_runtime_config_json.cpp.i
-.PHONY : src/config/hal_runtime_config_json.i
+config_manager.i: config_manager.cpp.i
+.PHONY : config_manager.i
 
 # target to preprocess a source file
-src/config/hal_runtime_config_json.cpp.i:
-	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core.dir\build.make motion_core_build/CMakeFiles/motion_core.dir/src/config/hal_runtime_config_json.cpp.i
-	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core_no_hw.dir\build.make motion_core_build/CMakeFiles/motion_core_no_hw.dir/src/config/hal_runtime_config_json.cpp.i
-.PHONY : src/config/hal_runtime_config_json.cpp.i
+config_manager.cpp.i:
+	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core.dir\build.make motion_core_build/CMakeFiles/motion_core.dir/config_manager.cpp.i
+	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core_no_hw.dir\build.make motion_core_build/CMakeFiles/motion_core_no_hw.dir/config_manager.cpp.i
+.PHONY : config_manager.cpp.i
 
-src/config/hal_runtime_config_json.s: src/config/hal_runtime_config_json.cpp.s
-.PHONY : src/config/hal_runtime_config_json.s
+config_manager.s: config_manager.cpp.s
+.PHONY : config_manager.s
 
 # target to generate assembly for a file
-src/config/hal_runtime_config_json.cpp.s:
-	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core.dir\build.make motion_core_build/CMakeFiles/motion_core.dir/src/config/hal_runtime_config_json.cpp.s
-	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core_no_hw.dir\build.make motion_core_build/CMakeFiles/motion_core_no_hw.dir/src/config/hal_runtime_config_json.cpp.s
-.PHONY : src/config/hal_runtime_config_json.cpp.s
+config_manager.cpp.s:
+	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core.dir\build.make motion_core_build/CMakeFiles/motion_core.dir/config_manager.cpp.s
+	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core_no_hw.dir\build.make motion_core_build/CMakeFiles/motion_core_no_hw.dir/config_manager.cpp.s
+.PHONY : config_manager.cpp.s
 
-src/hal_runtime.obj: src/hal_runtime.cpp.obj
-.PHONY : src/hal_runtime.obj
+hal_runtime.obj: hal_runtime.cpp.obj
+.PHONY : hal_runtime.obj
 
 # target to build an object file
-src/hal_runtime.cpp.obj:
-	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core.dir\build.make motion_core_build/CMakeFiles/motion_core.dir/src/hal_runtime.cpp.obj
-	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core_no_hw.dir\build.make motion_core_build/CMakeFiles/motion_core_no_hw.dir/src/hal_runtime.cpp.obj
-.PHONY : src/hal_runtime.cpp.obj
+hal_runtime.cpp.obj:
+	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core.dir\build.make motion_core_build/CMakeFiles/motion_core.dir/hal_runtime.cpp.obj
+	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core_no_hw.dir\build.make motion_core_build/CMakeFiles/motion_core_no_hw.dir/hal_runtime.cpp.obj
+.PHONY : hal_runtime.cpp.obj
 
-src/hal_runtime.i: src/hal_runtime.cpp.i
-.PHONY : src/hal_runtime.i
+hal_runtime.i: hal_runtime.cpp.i
+.PHONY : hal_runtime.i
 
 # target to preprocess a source file
-src/hal_runtime.cpp.i:
-	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core.dir\build.make motion_core_build/CMakeFiles/motion_core.dir/src/hal_runtime.cpp.i
-	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core_no_hw.dir\build.make motion_core_build/CMakeFiles/motion_core_no_hw.dir/src/hal_runtime.cpp.i
-.PHONY : src/hal_runtime.cpp.i
+hal_runtime.cpp.i:
+	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core.dir\build.make motion_core_build/CMakeFiles/motion_core.dir/hal_runtime.cpp.i
+	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core_no_hw.dir\build.make motion_core_build/CMakeFiles/motion_core_no_hw.dir/hal_runtime.cpp.i
+.PHONY : hal_runtime.cpp.i
 
-src/hal_runtime.s: src/hal_runtime.cpp.s
-.PHONY : src/hal_runtime.s
+hal_runtime.s: hal_runtime.cpp.s
+.PHONY : hal_runtime.s
 
 # target to generate assembly for a file
-src/hal_runtime.cpp.s:
-	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core.dir\build.make motion_core_build/CMakeFiles/motion_core.dir/src/hal_runtime.cpp.s
-	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core_no_hw.dir\build.make motion_core_build/CMakeFiles/motion_core_no_hw.dir/src/hal_runtime.cpp.s
-.PHONY : src/hal_runtime.cpp.s
+hal_runtime.cpp.s:
+	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core.dir\build.make motion_core_build/CMakeFiles/motion_core.dir/hal_runtime.cpp.s
+	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core_no_hw.dir\build.make motion_core_build/CMakeFiles/motion_core_no_hw.dir/hal_runtime.cpp.s
+.PHONY : hal_runtime.cpp.s
 
-src/runtime_factory_registry.obj: src/runtime_factory_registry.cpp.obj
-.PHONY : src/runtime_factory_registry.obj
+hal_runtime_config_json.obj: hal_runtime_config_json.cpp.obj
+.PHONY : hal_runtime_config_json.obj
 
 # target to build an object file
-src/runtime_factory_registry.cpp.obj:
-	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core.dir\build.make motion_core_build/CMakeFiles/motion_core.dir/src/runtime_factory_registry.cpp.obj
-	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core_no_hw.dir\build.make motion_core_build/CMakeFiles/motion_core_no_hw.dir/src/runtime_factory_registry.cpp.obj
-.PHONY : src/runtime_factory_registry.cpp.obj
+hal_runtime_config_json.cpp.obj:
+	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core.dir\build.make motion_core_build/CMakeFiles/motion_core.dir/hal_runtime_config_json.cpp.obj
+	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core_no_hw.dir\build.make motion_core_build/CMakeFiles/motion_core_no_hw.dir/hal_runtime_config_json.cpp.obj
+.PHONY : hal_runtime_config_json.cpp.obj
 
-src/runtime_factory_registry.i: src/runtime_factory_registry.cpp.i
-.PHONY : src/runtime_factory_registry.i
+hal_runtime_config_json.i: hal_runtime_config_json.cpp.i
+.PHONY : hal_runtime_config_json.i
 
 # target to preprocess a source file
-src/runtime_factory_registry.cpp.i:
-	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core.dir\build.make motion_core_build/CMakeFiles/motion_core.dir/src/runtime_factory_registry.cpp.i
-	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core_no_hw.dir\build.make motion_core_build/CMakeFiles/motion_core_no_hw.dir/src/runtime_factory_registry.cpp.i
-.PHONY : src/runtime_factory_registry.cpp.i
+hal_runtime_config_json.cpp.i:
+	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core.dir\build.make motion_core_build/CMakeFiles/motion_core.dir/hal_runtime_config_json.cpp.i
+	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core_no_hw.dir\build.make motion_core_build/CMakeFiles/motion_core_no_hw.dir/hal_runtime_config_json.cpp.i
+.PHONY : hal_runtime_config_json.cpp.i
 
-src/runtime_factory_registry.s: src/runtime_factory_registry.cpp.s
-.PHONY : src/runtime_factory_registry.s
+hal_runtime_config_json.s: hal_runtime_config_json.cpp.s
+.PHONY : hal_runtime_config_json.s
 
 # target to generate assembly for a file
-src/runtime_factory_registry.cpp.s:
-	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core.dir\build.make motion_core_build/CMakeFiles/motion_core.dir/src/runtime_factory_registry.cpp.s
-	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core_no_hw.dir\build.make motion_core_build/CMakeFiles/motion_core_no_hw.dir/src/runtime_factory_registry.cpp.s
-.PHONY : src/runtime_factory_registry.cpp.s
+hal_runtime_config_json.cpp.s:
+	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core.dir\build.make motion_core_build/CMakeFiles/motion_core.dir/hal_runtime_config_json.cpp.s
+	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core_no_hw.dir\build.make motion_core_build/CMakeFiles/motion_core_no_hw.dir/hal_runtime_config_json.cpp.s
+.PHONY : hal_runtime_config_json.cpp.s
 
-src/runtime_loop.obj: src/runtime_loop.cpp.obj
-.PHONY : src/runtime_loop.obj
+motion_orchestrator.obj: motion_orchestrator.cpp.obj
+.PHONY : motion_orchestrator.obj
 
 # target to build an object file
-src/runtime_loop.cpp.obj:
-	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core.dir\build.make motion_core_build/CMakeFiles/motion_core.dir/src/runtime_loop.cpp.obj
-	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core_no_hw.dir\build.make motion_core_build/CMakeFiles/motion_core_no_hw.dir/src/runtime_loop.cpp.obj
-.PHONY : src/runtime_loop.cpp.obj
+motion_orchestrator.cpp.obj:
+	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core.dir\build.make motion_core_build/CMakeFiles/motion_core.dir/motion_orchestrator.cpp.obj
+	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core_no_hw.dir\build.make motion_core_build/CMakeFiles/motion_core_no_hw.dir/motion_orchestrator.cpp.obj
+.PHONY : motion_orchestrator.cpp.obj
 
-src/runtime_loop.i: src/runtime_loop.cpp.i
-.PHONY : src/runtime_loop.i
+motion_orchestrator.i: motion_orchestrator.cpp.i
+.PHONY : motion_orchestrator.i
 
 # target to preprocess a source file
-src/runtime_loop.cpp.i:
-	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core.dir\build.make motion_core_build/CMakeFiles/motion_core.dir/src/runtime_loop.cpp.i
-	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core_no_hw.dir\build.make motion_core_build/CMakeFiles/motion_core_no_hw.dir/src/runtime_loop.cpp.i
-.PHONY : src/runtime_loop.cpp.i
+motion_orchestrator.cpp.i:
+	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core.dir\build.make motion_core_build/CMakeFiles/motion_core.dir/motion_orchestrator.cpp.i
+	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core_no_hw.dir\build.make motion_core_build/CMakeFiles/motion_core_no_hw.dir/motion_orchestrator.cpp.i
+.PHONY : motion_orchestrator.cpp.i
 
-src/runtime_loop.s: src/runtime_loop.cpp.s
-.PHONY : src/runtime_loop.s
+motion_orchestrator.s: motion_orchestrator.cpp.s
+.PHONY : motion_orchestrator.s
 
 # target to generate assembly for a file
-src/runtime_loop.cpp.s:
-	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core.dir\build.make motion_core_build/CMakeFiles/motion_core.dir/src/runtime_loop.cpp.s
-	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core_no_hw.dir\build.make motion_core_build/CMakeFiles/motion_core_no_hw.dir/src/runtime_loop.cpp.s
-.PHONY : src/runtime_loop.cpp.s
+motion_orchestrator.cpp.s:
+	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core.dir\build.make motion_core_build/CMakeFiles/motion_core.dir/motion_orchestrator.cpp.s
+	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core_no_hw.dir\build.make motion_core_build/CMakeFiles/motion_core_no_hw.dir/motion_orchestrator.cpp.s
+.PHONY : motion_orchestrator.cpp.s
+
+parameter_manager.obj: parameter_manager.cpp.obj
+.PHONY : parameter_manager.obj
+
+# target to build an object file
+parameter_manager.cpp.obj:
+	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core.dir\build.make motion_core_build/CMakeFiles/motion_core.dir/parameter_manager.cpp.obj
+	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core_no_hw.dir\build.make motion_core_build/CMakeFiles/motion_core_no_hw.dir/parameter_manager.cpp.obj
+.PHONY : parameter_manager.cpp.obj
+
+parameter_manager.i: parameter_manager.cpp.i
+.PHONY : parameter_manager.i
+
+# target to preprocess a source file
+parameter_manager.cpp.i:
+	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core.dir\build.make motion_core_build/CMakeFiles/motion_core.dir/parameter_manager.cpp.i
+	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core_no_hw.dir\build.make motion_core_build/CMakeFiles/motion_core_no_hw.dir/parameter_manager.cpp.i
+.PHONY : parameter_manager.cpp.i
+
+parameter_manager.s: parameter_manager.cpp.s
+.PHONY : parameter_manager.s
+
+# target to generate assembly for a file
+parameter_manager.cpp.s:
+	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core.dir\build.make motion_core_build/CMakeFiles/motion_core.dir/parameter_manager.cpp.s
+	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core_no_hw.dir\build.make motion_core_build/CMakeFiles/motion_core_no_hw.dir/parameter_manager.cpp.s
+.PHONY : parameter_manager.cpp.s
+
+runtime_factory_registry.obj: runtime_factory_registry.cpp.obj
+.PHONY : runtime_factory_registry.obj
+
+# target to build an object file
+runtime_factory_registry.cpp.obj:
+	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core.dir\build.make motion_core_build/CMakeFiles/motion_core.dir/runtime_factory_registry.cpp.obj
+	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core_no_hw.dir\build.make motion_core_build/CMakeFiles/motion_core_no_hw.dir/runtime_factory_registry.cpp.obj
+.PHONY : runtime_factory_registry.cpp.obj
+
+runtime_factory_registry.i: runtime_factory_registry.cpp.i
+.PHONY : runtime_factory_registry.i
+
+# target to preprocess a source file
+runtime_factory_registry.cpp.i:
+	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core.dir\build.make motion_core_build/CMakeFiles/motion_core.dir/runtime_factory_registry.cpp.i
+	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core_no_hw.dir\build.make motion_core_build/CMakeFiles/motion_core_no_hw.dir/runtime_factory_registry.cpp.i
+.PHONY : runtime_factory_registry.cpp.i
+
+runtime_factory_registry.s: runtime_factory_registry.cpp.s
+.PHONY : runtime_factory_registry.s
+
+# target to generate assembly for a file
+runtime_factory_registry.cpp.s:
+	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core.dir\build.make motion_core_build/CMakeFiles/motion_core.dir/runtime_factory_registry.cpp.s
+	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core_no_hw.dir\build.make motion_core_build/CMakeFiles/motion_core_no_hw.dir/runtime_factory_registry.cpp.s
+.PHONY : runtime_factory_registry.cpp.s
+
+runtime_loop.obj: runtime_loop.cpp.obj
+.PHONY : runtime_loop.obj
+
+# target to build an object file
+runtime_loop.cpp.obj:
+	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core.dir\build.make motion_core_build/CMakeFiles/motion_core.dir/runtime_loop.cpp.obj
+	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core_no_hw.dir\build.make motion_core_build/CMakeFiles/motion_core_no_hw.dir/runtime_loop.cpp.obj
+.PHONY : runtime_loop.cpp.obj
+
+runtime_loop.i: runtime_loop.cpp.i
+.PHONY : runtime_loop.i
+
+# target to preprocess a source file
+runtime_loop.cpp.i:
+	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core.dir\build.make motion_core_build/CMakeFiles/motion_core.dir/runtime_loop.cpp.i
+	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core_no_hw.dir\build.make motion_core_build/CMakeFiles/motion_core_no_hw.dir/runtime_loop.cpp.i
+.PHONY : runtime_loop.cpp.i
+
+runtime_loop.s: runtime_loop.cpp.s
+.PHONY : runtime_loop.s
+
+# target to generate assembly for a file
+runtime_loop.cpp.s:
+	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core.dir\build.make motion_core_build/CMakeFiles/motion_core.dir/runtime_loop.cpp.s
+	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core_no_hw.dir\build.make motion_core_build/CMakeFiles/motion_core_no_hw.dir/runtime_loop.cpp.s
+.PHONY : runtime_loop.cpp.s
+
+telemetry_distributor.obj: telemetry_distributor.cpp.obj
+.PHONY : telemetry_distributor.obj
+
+# target to build an object file
+telemetry_distributor.cpp.obj:
+	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core.dir\build.make motion_core_build/CMakeFiles/motion_core.dir/telemetry_distributor.cpp.obj
+	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core_no_hw.dir\build.make motion_core_build/CMakeFiles/motion_core_no_hw.dir/telemetry_distributor.cpp.obj
+.PHONY : telemetry_distributor.cpp.obj
+
+telemetry_distributor.i: telemetry_distributor.cpp.i
+.PHONY : telemetry_distributor.i
+
+# target to preprocess a source file
+telemetry_distributor.cpp.i:
+	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core.dir\build.make motion_core_build/CMakeFiles/motion_core.dir/telemetry_distributor.cpp.i
+	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core_no_hw.dir\build.make motion_core_build/CMakeFiles/motion_core_no_hw.dir/telemetry_distributor.cpp.i
+.PHONY : telemetry_distributor.cpp.i
+
+telemetry_distributor.s: telemetry_distributor.cpp.s
+.PHONY : telemetry_distributor.s
+
+# target to generate assembly for a file
+telemetry_distributor.cpp.s:
+	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core.dir\build.make motion_core_build/CMakeFiles/motion_core.dir/telemetry_distributor.cpp.s
+	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core_no_hw.dir\build.make motion_core_build/CMakeFiles/motion_core_no_hw.dir/telemetry_distributor.cpp.s
+.PHONY : telemetry_distributor.cpp.s
+
+trajectory_generator.obj: trajectory_generator.cpp.obj
+.PHONY : trajectory_generator.obj
+
+# target to build an object file
+trajectory_generator.cpp.obj:
+	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core.dir\build.make motion_core_build/CMakeFiles/motion_core.dir/trajectory_generator.cpp.obj
+	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core_no_hw.dir\build.make motion_core_build/CMakeFiles/motion_core_no_hw.dir/trajectory_generator.cpp.obj
+.PHONY : trajectory_generator.cpp.obj
+
+trajectory_generator.i: trajectory_generator.cpp.i
+.PHONY : trajectory_generator.i
+
+# target to preprocess a source file
+trajectory_generator.cpp.i:
+	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core.dir\build.make motion_core_build/CMakeFiles/motion_core.dir/trajectory_generator.cpp.i
+	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core_no_hw.dir\build.make motion_core_build/CMakeFiles/motion_core_no_hw.dir/trajectory_generator.cpp.i
+.PHONY : trajectory_generator.cpp.i
+
+trajectory_generator.s: trajectory_generator.cpp.s
+.PHONY : trajectory_generator.s
+
+# target to generate assembly for a file
+trajectory_generator.cpp.s:
+	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core.dir\build.make motion_core_build/CMakeFiles/motion_core.dir/trajectory_generator.cpp.s
+	cd /d D:\2.Github\MotorConfigurator\MotorConfugurator\build-gcc && $(MAKE) $(MAKESILENT) -f motion_core_build\CMakeFiles\motion_core_no_hw.dir\build.make motion_core_build/CMakeFiles/motion_core_no_hw.dir/trajectory_generator.cpp.s
+.PHONY : trajectory_generator.cpp.s
 
 # Help Target
 help:
@@ -288,21 +423,36 @@ help:
 	@echo ... rebuild_cache
 	@echo ... motion_core
 	@echo ... motion_core_no_hw
-	@echo ... src/config/axis_config_json.obj
-	@echo ... src/config/axis_config_json.i
-	@echo ... src/config/axis_config_json.s
-	@echo ... src/config/hal_runtime_config_json.obj
-	@echo ... src/config/hal_runtime_config_json.i
-	@echo ... src/config/hal_runtime_config_json.s
-	@echo ... src/hal_runtime.obj
-	@echo ... src/hal_runtime.i
-	@echo ... src/hal_runtime.s
-	@echo ... src/runtime_factory_registry.obj
-	@echo ... src/runtime_factory_registry.i
-	@echo ... src/runtime_factory_registry.s
-	@echo ... src/runtime_loop.obj
-	@echo ... src/runtime_loop.i
-	@echo ... src/runtime_loop.s
+	@echo ... axis_config_json.obj
+	@echo ... axis_config_json.i
+	@echo ... axis_config_json.s
+	@echo ... config_manager.obj
+	@echo ... config_manager.i
+	@echo ... config_manager.s
+	@echo ... hal_runtime.obj
+	@echo ... hal_runtime.i
+	@echo ... hal_runtime.s
+	@echo ... hal_runtime_config_json.obj
+	@echo ... hal_runtime_config_json.i
+	@echo ... hal_runtime_config_json.s
+	@echo ... motion_orchestrator.obj
+	@echo ... motion_orchestrator.i
+	@echo ... motion_orchestrator.s
+	@echo ... parameter_manager.obj
+	@echo ... parameter_manager.i
+	@echo ... parameter_manager.s
+	@echo ... runtime_factory_registry.obj
+	@echo ... runtime_factory_registry.i
+	@echo ... runtime_factory_registry.s
+	@echo ... runtime_loop.obj
+	@echo ... runtime_loop.i
+	@echo ... runtime_loop.s
+	@echo ... telemetry_distributor.obj
+	@echo ... telemetry_distributor.i
+	@echo ... telemetry_distributor.s
+	@echo ... trajectory_generator.obj
+	@echo ... trajectory_generator.i
+	@echo ... trajectory_generator.s
 .PHONY : help
 
 

@@ -264,13 +264,12 @@ The system currently supports two motion sources:
 
 Only one source may own motion submission at a time.
 
-`RuntimeQueueIngress` enforces motion ownership by checking the current `MotionControlSource`.
 
 ### 7.2 Required operator-priority rule
 
 The current target policy is:
 
-> HexaMotion may own trajectory generation only while the UI allows it.  
+> HexaMotion may own trajectory generation only while the UI allows it.
 > The UI always owns safety, visibility, and takeover.
 
 This means:
@@ -409,6 +408,7 @@ The HAL transports and schedules discrete `MotionCommandPoint` samples.
 - a **single point** behaves like a waypoint/profile move;
 - a **sequence of points** behaves like sampled trajectory streaming;
 - continuity depends on the sender continuously feeding points.
+- **`logical_module_name/cpp+h+test`** directory layout is strictly enforced for modularity.
 
 ### 9.3 Motion model diagram
 
@@ -465,6 +465,10 @@ The UI can display during motion:
 - selected transport-specific status, such as MKS homing sequence text.
 
 The system must preserve the invariant that actual position never gets overwritten by requested target.
+
+Digital input display is transport-specific. EtherCAT may publish `digital_inputs` when drive/input process data is available. MKS CAN telemetry must not synthesize or display digital input bits unless the transport explicitly implements real input acquisition.
+
+Displayed timing values are transport-specific diagnostics, not all of them are deterministic control-loop frequencies. For MKS CAN, command TX, position RX, speed RX, status RX, and protection RX values are protocol event rates. For EtherCAT, cycle-derived values may be displayed as cycle rates when sourced from the EtherCAT runtime cycle.
 
 ---
 
@@ -550,6 +554,14 @@ Runtime is built from:
 - latest valid scan state where required.
 
 Axis config files store parameter snapshots and are applied back through the canonical axis config path.
+
+Parameter and axis-configuration UI operations are asynchronous and completion-driven:
+
+- parameter list/read requests must either enqueue successfully or return a typed rejection such as `Busy`;
+- UI-affecting parameter requests must never be silently dropped, because that can leave operator controls in an indefinite busy state;
+- parameter writes publish explicit completion signals before the UI performs readback refresh;
+- MKS CAN parameter read/write operations mark the axis configuration path busy; while busy, normal asynchronous telemetry polling for that axis is paused. Synchronous MKS parameter commands must drain their own bounded CAN responses instead of depending on paused telemetry polling, and after a successful parameter patch the bus manager explicitly reasserts the MKS slave response policy and restarts the telemetry polling schedule.
+- axis config import/export/preview operations are serialized at the Qt controller boundary to avoid unbounded worker creation and runtime/config races.
 
 ---
 
@@ -638,7 +650,8 @@ Its core design is:
 
 The key intended policy is:
 
-> HexaMotion may generate motion only while the UI allows it.  
-> The UI always keeps operator priority for telemetry, stop, and takeover.
+- HexaMotion may generate motion only while the UI allows it.
+- The UI always keeps operator priority for telemetry, stop, and takeover.
+- **Decomposition of monolithic components into clean sub-modules is strictly required.**
 
 This must remain the governing architectural rule for future implementation work.

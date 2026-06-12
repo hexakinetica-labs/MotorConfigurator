@@ -5,11 +5,16 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 endif()
 
 add_library(motion_core STATIC
-    src/runtime_loop.cpp
-    src/runtime_factory_registry.cpp
-    src/hal_runtime.cpp
-    src/config/axis_config_json.cpp
-    src/config/hal_runtime_config_json.cpp
+    runtime_loop.cpp
+    runtime_factory_registry.cpp
+    hal_runtime.cpp
+    axis_config_json.cpp
+    hal_runtime_config_json.cpp
+    motion_orchestrator.cpp
+    telemetry_distributor.cpp
+    parameter_manager.cpp
+    config_manager.cpp
+    trajectory_generator.cpp
 )
 
 target_compile_definitions(motion_core PRIVATE MOTION_CORE_WITH_DRIVERS)
@@ -17,6 +22,8 @@ target_compile_definitions(motion_core PRIVATE MOTION_CORE_WITH_DRIVERS)
 target_include_directories(motion_core
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}
+        ${CMAKE_CURRENT_SOURCE_DIR}/..
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/../3rdparty
         ${CMAKE_CURRENT_SOURCE_DIR}/../drivers/interfaces
@@ -24,17 +31,21 @@ target_include_directories(motion_core
 
 target_compile_features(motion_core PUBLIC cxx_std_20)
 
-# Вариант без драйверов — только для unit-тестов (нет MOTION_CORE_WITH_DRIVERS).
-# Исключает open_runtime/discover, которые тянут MKS/EtherCAT символы.
+# Variant without HW - for unit tests
 add_library(motion_core_no_hw STATIC
-    src/runtime_loop.cpp
-    src/runtime_factory_registry.cpp
-    src/hal_runtime.cpp
-    src/config/axis_config_json.cpp
-    src/config/hal_runtime_config_json.cpp
+    runtime_loop.cpp
+    runtime_factory_registry.cpp
+    hal_runtime.cpp
+    axis_config_json.cpp
+    hal_runtime_config_json.cpp
+    motion_orchestrator.cpp
+    telemetry_distributor.cpp
+    parameter_manager.cpp
+    config_manager.cpp
+    trajectory_generator.cpp
 )
 target_include_directories(motion_core_no_hw
-    PUBLIC  ${CMAKE_CURRENT_SOURCE_DIR}/include
+    PUBLIC  ${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/..
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../3rdparty
 )
 target_compile_features(motion_core_no_hw PUBLIC cxx_std_20)
